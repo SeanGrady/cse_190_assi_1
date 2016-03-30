@@ -252,7 +252,7 @@ def generate_measurements(seed, motions, heat_map, texture_map, sensor_right, st
     # In ROS the motion of the robot should be simulated using the assumed model, but here we are not taking
     # the probabilities into account
         curr_loc = [(curr_loc[0]+motions[i][0]) % num_rows , (curr_loc[1]+motions[i][1]) % num_cols]
-        path_taken[curr_loc[0]][curr_loc[1]]='*'
+        path_taken[curr_loc[0]][curr_loc[1]]=str(i)
         # select the texture measurement based on the probability of getting a correct value (sense_right)
         p = random.uniform(0,1)
         if p < sensor_right:
@@ -265,7 +265,7 @@ def generate_measurements(seed, motions, heat_map, texture_map, sensor_right, st
         temp_measurements[i] = heat_map[curr_loc[0]][curr_loc[1]]
         
     temp_measurements = add_noise(temp_measurements, std_temp_meas)
-    print "Path taken by robot denoted by '*'"
+    print "Path taken by robot denoted by numbers"
     for i in range(len(path_taken)):
         print path_taken[i]
     #print "Temp measurements",temp_measurements

@@ -1,0 +1,4 @@
+How much of this will the students implement? the entirety of localize plus movement decisions? More or less than that?
+    maybe makes the most sense to implement the map and sensor nodes, and have the students implement the robot node from scratch
+does the localize function need to change
+how easy is it going to be to install things (via apt-get, pip, etc) on the virtualbox? i.e. can I use yaml, json, etc
