@@ -15,8 +15,8 @@ class RobotController():
                 self.handle_incoming_temperature_data
         )
         self.texture_requester = rospy.ServiceProxy(
-                "requestTemperature",
-                requestTemperature,
+                "requestTexture",
+                requestTexture,
         )
         self.move_command_publisher = rospy.Publisher(
                 "/robot/move_commands",
