@@ -1,0 +1,4 @@
+new motion model
+comments
+writeup
+visulaizations through rviz

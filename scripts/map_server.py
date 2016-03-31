@@ -5,6 +5,7 @@ import random as r
 import math as m
 import numpy as np
 from copy import deepcopy
+from cse_190_assi_1.srv import requestMapData, moveService
 
 class MapServer():
     def __init__(self):
@@ -14,20 +15,14 @@ class MapServer():
                          ['C','-','H','-','-'],
                          ['C','-','H','-','-'],
                          ['C','C','H','H','H']]
-        self.heat_map = self.generate_heatmap(self.pipe_map)
         self.texture_map = [['S','S','S','S','R'],
                             ['R','R','S','R','R'],
                             ['R','S','S','S','S'],
                             ['S','R','R','S','R']]
-        self.temperature_service = rospy.Service(
-                "tempSensorService",
-                tempSensorService,
-                self.handle_temperature_request
-        )
-        self.texture_service = rospy.Service(
-                "texSensorService",
-                texSensorService,
-                self.handle_texture_request
+        self.map_data_service = rospy.Service(
+                "requestMapData",
+                requestMapData,
+                self.handle_data_request
         )
         self.move_service = rospy.Service(
                 "moveService",
@@ -35,17 +30,20 @@ class MapServer():
                 self.handle_move_request
         )
         self.pos = self.initialize_position()
+        rospy.spin()
 
     def initialize_position(self):
-        self.pos = [3, 3]
+        pos = [3, 3]
+        return pos
 
-    def handle_temperature_request(self, request):
-        temp = self.heat_map[self.pos[0]][self.pos[1]]
-        return temp
-
-    def handle_texture_request(self, request):
-        tex = self.texture_map[self.pos[0]][self.pos[1]]
-        return tex
+    def handle_data_request(self, request):
+        print request
+        if request.data_type == "temp":
+            temp = self.pipe_map[self.pos[0]][self.pos[1]]
+            return temp
+        if request.data_type == "tex":
+            tex = self.texture_map[self.pos[0]][self.pos[1]]
+            return tex
 
     def handle_move_request(self, request):
         move = request.move
@@ -58,6 +56,7 @@ class MapServer():
     def handle_request_maps(self, request):
         pass
 
+    '''
     def generate_heatmap(self, pipe_map):
         """
         Generates a heat map based on whether there is a cold or hot pipe
@@ -78,3 +77,8 @@ class MapServer():
                 else:
                     heat_map[i][j] = temp_warm
         return heat_map
+    '''
+
+
+if __name__ == '__main__':
+    ms = MapServer()
