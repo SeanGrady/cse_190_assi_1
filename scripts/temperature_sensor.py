@@ -28,6 +28,8 @@ class TempSensor():
         self.std_noise = 10
         self.temp_message = temperatureMessage()
         self.rate = rospy.Rate(1)
+        self.seed = 0
+        random.seed(self.seed)
         self.sensor_loop()
 
     def sensor_loop(self):

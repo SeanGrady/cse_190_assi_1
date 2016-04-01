@@ -19,6 +19,8 @@ class TexSensor():
                 textureService,
                 self.handle_texture_request
         )
+        self.seed = 0
+        r.seed(self.seed)
         rospy.spin()
 
     def handle_texture_request(self, request):
@@ -32,7 +34,14 @@ class TexSensor():
         return tex
 
     def add_noise(self, measurement):
-        pass
+        roll = r.uniform(0,1)
+        if roll < self.prob_correct:
+            return measurement
+        else:
+            if measurement == 'R':
+                return 'S'
+            elif measurement == 'S':
+                return 'R'
 
 
 if __name__ == '__main__':
