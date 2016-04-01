@@ -5,20 +5,21 @@ import random as r
 import math as m
 import numpy as np
 from copy import deepcopy
-from cse_190_assi_1.srv import requestMapData, textureService
+from cse_190_assi_1.srv import requestMapData, requestTexture 
 
 class TexSensor():
     def __init__(self):
-        rospy.init_node("temperature_sensor")
+        rospy.init_node("texture_sensor")
         self.texture_requester = rospy.ServiceProxy(
                 "requestMapData",
                 requestMapData
         )
         self.texture_service = rospy.Service(
-                "textureService",
-                textureService,
+                "requestTexture",
+                requestTexture,
                 self.handle_texture_request
         )
+        self.prob_correct = 0.99
         self.seed = 0
         r.seed(self.seed)
         rospy.spin()

@@ -37,7 +37,6 @@ class MapServer():
         return pos
 
     def handle_data_request(self, request):
-        print request
         if request.data_type == "temp":
             temp = self.pipe_map[self.pos[0]][self.pos[1]]
             return temp

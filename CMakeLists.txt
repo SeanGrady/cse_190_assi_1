@@ -55,6 +55,7 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    moveService.srv
    requestMapData.srv
+   requestTexture.srv
  )
 
 ## Generate actions in the 'action' folder

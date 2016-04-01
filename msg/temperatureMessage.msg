@@ -1,1 +1,1 @@
-int32 temperature
+float32 temperature

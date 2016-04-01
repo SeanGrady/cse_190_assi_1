@@ -27,7 +27,7 @@ class RobotController():
         self.initialize_constants()
         self.set_motion_commands()
         self.initialize_maps()
-        self.explore()
+        rospy.spin()
 
     def initialize_constants(self):
         self.prob_texture_correct = 0.99
@@ -78,7 +78,8 @@ class RobotController():
         evaluate->repeate loop
         '''
         temp = message.temperature
-
+        texture = self.request_texture_reading()
+        print temp, texture
 
     def request_texture_reading(self):
         response = self.texture_requester()
