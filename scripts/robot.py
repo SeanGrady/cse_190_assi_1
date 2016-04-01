@@ -27,6 +27,9 @@ class RobotController():
         self.initialize_constants()
         self.set_motion_commands()
         self.initialize_maps()
+        self.initialize_beliefs()
+        self.motion_model = 'simple'
+        self.motions = [[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]]
         rospy.spin()
 
     def initialize_constants(self):
@@ -47,6 +50,12 @@ class RobotController():
                             ['R','R','S','R','R'],
                             ['R','S','S','S','S'],
                             ['S','R','R','S','R']]
+
+    def initialize_beliefs(self):
+        init_prob = 1.0 / float(len(texture_map)) / float(len(texture_map[0]))
+        starting_beliefs = [[init_prob for row in range(len(texture_map[0]))]
+                            for col in range(len(texture_map))]
+        self.probability_matrix = starting_beliefs
 
     def generate_heatmap(self, pipe_map):
         """
@@ -72,22 +81,64 @@ class RobotController():
     def begin_simulation(self):
         pass
 
+    def end_simulation(self):
+        pass
+
     def handle_incoming_temperature_data(self, message):
         '''
         because of timesteps and things, this is the main sense->move->
         evaluate->repeate loop
         '''
-        temp = message.temperature
-        texture = self.request_texture_reading()
-        print temp, texture
+        temp_reading = message.temperature
+        self.timestep(temp_reading)
+
+    def timestep(self, temp_reading):
+        self.update_from_temp(temp_reading)
+        texture_reading = self.request_texture_reading()
+        self.update_from_tex(texture_reading)
+        if len(self.motions) > 0:
+            self.move_and_update(self.motions.popleft())
+        else:
+            print "Motion complete"
+            show(self.probability_matrix)
+            self.end_simulation()
+
+    def update_from_temp(self, temp_reading):
+        pass
+
+    def update_from_tex(self, texture_reading):
+        pass
 
     def request_texture_reading(self):
         response = self.texture_requester()
         texture_reading = response.data
         return texture_reading
 
+    def move_and_update(self, move):
+        self.send_move_command(move)
+        self.update_beliefs_after_move(move)
+
     def send_move_command(self, move_command):
         self.move_requester(move_command)
+
+    def update_beliefs_after_move(self, move_command):
+        if self.motion_model == "simple":
+            temp_probs = deepcopy(self.probability_matrix)
+
+            num_cols = len(temp_probs[0])
+            num_rows = len(temp_probs)
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    start_x = (i - motion[0]) % num_rows
+                    start_y = (j - motion[1]) % num_cols
+                    temp_probs[i][j] = self.prob_successful_move * self.probability_matrix[start_x][start_y] + (1 - self.prob_successful_move) * temp_probs[i][j]
+
+            total_prob = sum(sum(p) for p in temp_probs)
+            if total_prob == 0:
+                print "sum of probabilities is zero"
+            else:
+                temp_probs = [[prob/total_prob for prob in row] for row in temp_probs]
+            self.probability_matrix = temp_probs
 
 
 if __name__ == '__main__':
