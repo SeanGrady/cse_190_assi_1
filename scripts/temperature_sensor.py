@@ -7,6 +7,7 @@ import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData
 from cse_190_assi_1.msg import temperatureMessage
+from std_msgs.msg import Bool
 
 class TempSensor():
     def __init__(self):
@@ -14,6 +15,11 @@ class TempSensor():
         self.temperature_requester = rospy.ServiceProxy(
                 "requestMapData",
                 requestMapData
+        )
+        self.activation_service = rospy.Subscriber(
+                "/temp_sensor/activation",
+                Bool,
+                self.handle_activation_message
         )
         self.temperature_publisher = rospy.Publisher(
                 "/temp_sensor/data",
@@ -30,15 +36,18 @@ class TempSensor():
         self.rate = rospy.Rate(1)
         self.seed = 0
         r.seed(self.seed)
-        rospy.sleep(1)
+        rospy.spin()
+
+    def handle_activation_message(self, message):
+        switch_value = message.data
+        self.sensor_on = switch_value
         self.sensor_loop()
 
     def sensor_loop(self):
-        while not rospy.is_shutdown():
+        while (not rospy.is_shutdown()) and self.sensor_on:
             measurement = self.take_measurement()
             noisy_measurement = self.add_noise(measurement)
             self.temp_message.temperature = noisy_measurement
-            print "temperature is: ", noisy_measurement
             self.temperature_publisher.publish(self.temp_message)
             self.rate.sleep()
 
@@ -51,8 +60,9 @@ class TempSensor():
     def add_noise(self, true_val):
         """ Returns temperature measurement after adding Gaussian noise"""
         noise = m.ceil(r.gauss(0, self.std_noise)*100.)/100.
-        noisy_measurment = true_val + noise
-        return noisy_measurment
+        noisy_measurement = true_val + noise
+        print "noisy temp: ", noisy_measurement
+        return noisy_measurement
 
 
 if __name__ == '__main__':

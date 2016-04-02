@@ -7,6 +7,7 @@ import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.msg import temperatureMessage
 from cse_190_assi_1.srv import requestTexture, moveService
+from std_msgs.msg import Bool
 from collections import deque
 
 class RobotController():
@@ -25,6 +26,11 @@ class RobotController():
                 "moveService",
                 moveService,
         )
+        self.temp_activator = rospy.Publisher(
+                "/temp_sensor/activation",
+                Bool,
+                queue_size = 10
+        )
         self.initialize_constants()
         self.set_motion_commands()
         self.initialize_maps()
@@ -32,7 +38,7 @@ class RobotController():
         self.motion_model = 'simple'
         self.motions = deque([[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]])
         rospy.sleep(2)
-        rospy.spin()
+        self.simulate()
 
     def initialize_constants(self):
         self.prob_texture_correct = 0.99
@@ -80,11 +86,19 @@ class RobotController():
                     heat_map[i][j] = temp_warm
         return heat_map
 
+    def simulate(self):
+        self.begin_simulation()
+        rospy.spin()
+
     def begin_simulation(self):
-        pass
+        activation_message = Bool()
+        activation_message.data = True
+        self.temp_activator.publish(activation_message)
 
     def end_simulation(self):
-        pass
+        activation_message = Bool()
+        activation_message.data = False
+        self.temp_activator.publish(activation_message)
 
     def handle_incoming_temperature_data(self, message):
         '''
@@ -92,12 +106,14 @@ class RobotController():
         evaluate->repeate loop
         '''
         temp_reading = message.temperature
+        #print "robot temp reading is: ", temp_reading
         self.timestep(temp_reading)
 
     def timestep(self, temp_reading):
         self.update_from_temp(temp_reading)
         texture_reading = self.request_texture_reading()
         self.update_from_tex(texture_reading)
+        print "Robot sensor values: ", texture_reading, temp_reading
         if len(self.motions) > 0:
             self.move_and_update(self.motions.popleft())
         else:
