@@ -30,6 +30,7 @@ class TempSensor():
         self.rate = rospy.Rate(1)
         self.seed = 0
         r.seed(self.seed)
+        rospy.sleep(1)
         self.sensor_loop()
 
     def sensor_loop(self):

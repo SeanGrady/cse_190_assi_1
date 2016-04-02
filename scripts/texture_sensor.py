@@ -22,6 +22,7 @@ class TexSensor():
         self.prob_correct = 0.99
         self.seed = 0
         r.seed(self.seed)
+        rospy.sleep(1)
         rospy.spin()
 
     def handle_texture_request(self, request):

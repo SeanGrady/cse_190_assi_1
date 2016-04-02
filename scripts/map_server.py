@@ -49,7 +49,11 @@ class MapServer():
         if self.uncertain_motion:
             pass
         else:
-            self.pos = [i + j for i, j in zip(self.pos, move)]
+            #self.pos = [i + j for i, j in zip(self.pos, move)]
+            num_rows = len(self.pipe_map)
+            num_cols = len(self.pipe_map)
+            self.pos[0] = (self.pos[0] + move[0]) % num_rows
+            self.pos[1] = (self.pos[1] + move[1]) % num_cols
         return []
 
     def handle_request_maps(self, request):

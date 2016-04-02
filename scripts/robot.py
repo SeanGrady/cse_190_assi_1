@@ -7,6 +7,7 @@ import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.msg import temperatureMessage
 from cse_190_assi_1.srv import requestTexture, moveService
+from collections import deque
 
 class RobotController():
     def __init__(self):
@@ -29,7 +30,8 @@ class RobotController():
         self.initialize_maps()
         self.initialize_beliefs()
         self.motion_model = 'simple'
-        self.motions = [[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]]
+        self.motions = deque([[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]])
+        rospy.sleep(2)
         rospy.spin()
 
     def initialize_constants(self):
@@ -52,9 +54,9 @@ class RobotController():
                             ['S','R','R','S','R']]
 
     def initialize_beliefs(self):
-        init_prob = 1.0 / float(len(texture_map)) / float(len(texture_map[0]))
-        starting_beliefs = [[init_prob for row in range(len(texture_map[0]))]
-                            for col in range(len(texture_map))]
+        init_prob = 1.0 / float(len(self.texture_map)) / float(len(self.texture_map[0]))
+        starting_beliefs = [[init_prob for row in range(len(self.texture_map[0]))]
+                            for col in range(len(self.texture_map))]
         self.probability_matrix = starting_beliefs
 
     def generate_heatmap(self, pipe_map):
@@ -100,11 +102,31 @@ class RobotController():
             self.move_and_update(self.motions.popleft())
         else:
             print "Motion complete"
-            show(self.probability_matrix)
+            self.show(self.probability_matrix)
             self.end_simulation()
 
+    def show(self, p):
+        rows = ['[' + ','.join(map(lambda x: '{0:.5f}'.format(x),r)) + ']' for r in p]
+        print '[' + ',\n '.join(rows) + ']'
+
     def update_from_temp(self, temp_reading):
-        pass
+        temp_probs = deepcopy(self.probability_matrix)
+        num_cols = len(temp_probs[0])
+        num_rows = len(temp_probs)
+        for i in range(num_rows):
+            for j in range(num_cols):
+                if self.std_dev_temp_sensor == 0:
+                    prob_hit = heat_map[i][j] == temp_reading
+                else:
+                    prob_hit = 1/(m.sqrt(2*m.pi)*self.std_dev_temp_sensor)*m.e**(-0.5*(float(self.heat_map[i][j] - temp_reading)/self.std_dev_temp_sensor)**2)
+                temp_probs[i][j] = prob_hit * self.probability_matrix[i][j]
+
+        total_prob = sum(sum(p) for p in temp_probs)
+        if total_prob == 0:
+            print "sum of probabilities is zero"
+        else:
+            temp_probs = [[prob/total_prob for prob in row] for row in temp_probs]
+        self.probability_matrix = temp_probs
 
     def update_from_tex(self, texture_reading):
         temp_probs = deepcopy(self.probability_matrix)
@@ -113,7 +135,7 @@ class RobotController():
         for i in range(num_rows):
             for j in range(num_cols):
                 hit = int(self.texture_map[i][j] == texture_reading)
-                temp_probs[i][j] = (self.prob_texture_correct * hit + (1 - prob_texture_correct) * (1 - hit)) * self.probability_matrix[i][j]
+                temp_probs[i][j] = (self.prob_texture_correct * hit + (1 - self.prob_texture_correct) * (1 - hit)) * self.probability_matrix[i][j]
 
         total_prob = sum(sum(p) for p in temp_probs)
         if total_prob == 0:
@@ -142,9 +164,9 @@ class RobotController():
             num_rows = len(temp_probs)
             for i in range(num_rows):
                 for j in range(num_cols):
-                    start_x = (i - motion[0]) % num_rows
-                    start_y = (j - motion[1]) % num_cols
-                    temp_probs[i][j] = self.prob_successful_move * self.probability_matrix[start_x][start_y] + (1 - self.prob_successful_move) * temp_probs[i][j]
+                    start_x = (i - move_command[0]) % num_rows
+                    start_y = (j - move_command[1]) % num_cols
+                    temp_probs[i][j] = self.prob_move_correct * self.probability_matrix[start_x][start_y] + (1 - self.prob_move_correct) * temp_probs[i][j]
 
             total_prob = sum(sum(p) for p in temp_probs)
             if total_prob == 0:
