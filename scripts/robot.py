@@ -98,7 +98,9 @@ class RobotController():
     def end_simulation(self):
         activation_message = Bool()
         activation_message.data = False
+        print activation_message
         self.temp_activator.publish(activation_message)
+        rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
         '''
@@ -113,7 +115,7 @@ class RobotController():
         self.update_from_temp(temp_reading)
         texture_reading = self.request_texture_reading()
         self.update_from_tex(texture_reading)
-        print "Robot sensor values: ", texture_reading, temp_reading
+        #print "Robot sensor values: ", texture_reading, temp_reading
         if len(self.motions) > 0:
             self.move_and_update(self.motions.popleft())
         else:
