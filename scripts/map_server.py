@@ -11,7 +11,7 @@ from cse_190_assi_1.srv import requestMapData, moveService
 class MapServer():
     def __init__(self):
         self.uncertain_motion = True
-        self.prob_move_correct = 1
+        self.prob_move_correct = .75
         rospy.init_node("map_server")
         self.pipe_map = [['C','-','H','H','-'],
                          ['C','-','H','-','-'],
@@ -57,16 +57,15 @@ class MapServer():
             return tex
 
     def handle_move_request(self, request):
-        move = request.move
+        move = list(request.move)
         if self.uncertain_motion:
             roll = r.uniform(0,1)
             if roll < self.prob_move_correct:
-                print "move successful, making move: ", move
                 self.make_move(move)
             else:
                 possible_moves = deepcopy(self.move_list)
-                wrong_moves = possible_moves.remove(move)
-                random_move = r.choice(wrong_moves)
+                possible_moves.remove(move)
+                random_move = r.choice(possible_moves)
                 self.make_move(random_move)
         elif not self.uncertain_motion:
             self.make_move(move)

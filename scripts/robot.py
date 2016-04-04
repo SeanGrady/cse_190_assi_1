@@ -43,7 +43,7 @@ class RobotController():
 
     def initialize_constants(self):
         self.prob_texture_correct = 0.99
-        self.prob_move_correct = 1.0
+        self.prob_move_correct = 0.75
         self.std_dev_temp_sensor = 10
 
     def set_motion_commands(self):
