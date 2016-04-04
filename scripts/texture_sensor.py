@@ -26,11 +26,18 @@ class TexSensor():
         rospy.spin()
 
     def handle_texture_request(self, request):
+        """
+        Callback function for the texture service that the robot node uses.
+        """
         texture = self.take_measurement()
         noisy_texture = self.add_noise(texture)
         return noisy_texture
 
     def take_measurement(self):
+        """
+        Get the texture of the current square from the map node via
+        the map data service.
+        """
         tex_response = self.texture_requester('tex')
         tex = tex_response.data
         return tex

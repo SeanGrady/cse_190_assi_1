@@ -45,10 +45,17 @@ class MapServer():
         rospy.spin()
 
     def initialize_position(self):
+        """
+        Set starting position.
+        """
         pos = [3, 3]
         return pos
 
     def handle_data_request(self, request):
+        """
+        Map data service that provides ground truth temperature or texture
+        data to other nodes.
+        """
         if request.data_type == "temp":
             temp = self.pipe_map[self.pos[0]][self.pos[1]]
             return temp
@@ -57,6 +64,12 @@ class MapServer():
             return tex
 
     def handle_move_request(self, request):
+        """
+        Service that moves the robot according to a move request.
+        self.uncertain_motion determines the motion model used: either
+        certain motion or correct motion with a set probability (random
+        otherwise).
+        """
         move = list(request.move)
         if self.uncertain_motion:
             roll = r.uniform(0,1)
@@ -72,6 +85,9 @@ class MapServer():
         return []
 
     def make_move(self, move):
+        """
+        Changes the robot's position
+        """
         num_rows = len(self.pipe_map)
         num_cols = len(self.pipe_map[0])
         self.pos[0] = (self.pos[0] + move[0]) % num_rows
@@ -79,6 +95,12 @@ class MapServer():
         print self.pos
 
     def handle_request_maps(self, request):
+        """
+        Might implement a way for the robot node to ask for the maps, rather
+        than have the students hard-code it into the robot (the robot node
+        does need to have the original pipe map and know how to go from that
+        to actual temperature though)
+        """
         pass
 
 
