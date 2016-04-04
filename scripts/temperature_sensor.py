@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-import random as r
+import random
 import math as m
 import numpy as np
 from copy import deepcopy
@@ -35,7 +35,7 @@ class TempSensor():
         self.temp_message = temperatureMessage()
         self.seed = 0
         self.sensor_on = False
-        r.seed(self.seed)
+        random.seed(self.seed)
         self.sensor_loop()
 
     def handle_activation_message(self, message):
@@ -62,7 +62,7 @@ class TempSensor():
 
     def add_noise(self, true_val):
         """ Returns temperature measurement after adding Gaussian noise"""
-        noise = m.ceil(r.gauss(0, self.std_noise)*100.)/100.
+        noise = m.ceil(random.gauss(0, self.std_noise)*100.)/100.
         noisy_measurement = true_val + noise
         #print "noisy temp: ", noisy_measurement
         return noisy_measurement

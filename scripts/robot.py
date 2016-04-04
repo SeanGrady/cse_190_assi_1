@@ -10,6 +10,7 @@ from cse_190_assi_1.srv import requestTexture, moveService
 from std_msgs.msg import Bool
 from collections import deque
 
+
 class RobotController():
     def __init__(self):
         rospy.init_node("robot_controller")
@@ -115,7 +116,7 @@ class RobotController():
         self.update_from_temp(temp_reading)
         texture_reading = self.request_texture_reading()
         self.update_from_tex(texture_reading)
-        #print "Robot sensor values: ", texture_reading, temp_reading
+        print "Robot sensor values: ", texture_reading, temp_reading
         if len(self.motions) > 0:
             self.move_and_update(self.motions.popleft())
         else:

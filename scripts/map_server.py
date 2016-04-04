@@ -7,9 +7,11 @@ import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData, moveService
 
+
 class MapServer():
     def __init__(self):
-        self.uncertain_motion = False
+        self.uncertain_motion = True
+        self.prob_move_correct = 1
         rospy.init_node("map_server")
         self.pipe_map = [['C','-','H','H','-'],
                          ['C','-','H','-','-'],
@@ -30,6 +32,16 @@ class MapServer():
                 self.handle_move_request
         )
         self.pos = self.initialize_position()
+        self.move_list = [
+                [0,0],
+                [1,0],
+                [0,1],
+                [-1,0],
+                [0,-1]
+        ]
+        self.seed = 0
+        r.seed(self.seed)
+        print "starting pos: ", self.pos
         rospy.spin()
 
     def initialize_position(self):
@@ -47,40 +59,28 @@ class MapServer():
     def handle_move_request(self, request):
         move = request.move
         if self.uncertain_motion:
-            pass
-        else:
-            #self.pos = [i + j for i, j in zip(self.pos, move)]
-            num_rows = len(self.pipe_map)
-            num_cols = len(self.pipe_map)
-            self.pos[0] = (self.pos[0] + move[0]) % num_rows
-            self.pos[1] = (self.pos[1] + move[1]) % num_cols
+            roll = r.uniform(0,1)
+            if roll < self.prob_move_correct:
+                print "move successful, making move: ", move
+                self.make_move(move)
+            else:
+                possible_moves = deepcopy(self.move_list)
+                wrong_moves = possible_moves.remove(move)
+                random_move = r.choice(wrong_moves)
+                self.make_move(random_move)
+        elif not self.uncertain_motion:
+            self.make_move(move)
         return []
+
+    def make_move(self, move):
+        num_rows = len(self.pipe_map)
+        num_cols = len(self.pipe_map[0])
+        self.pos[0] = (self.pos[0] + move[0]) % num_rows
+        self.pos[1] = (self.pos[1] + move[1]) % num_cols
+        print self.pos
 
     def handle_request_maps(self, request):
         pass
-
-    '''
-    def generate_heatmap(self, pipe_map):
-        """
-        Generates a heat map based on whether there is a cold or hot pipe
-        running under each tile. Tiles with no pipes underneath will have
-        a "warm" temperature
-        """
-        temp_cold = 20.0
-        temp_hot  = 40.0
-        temp_warm = 25.0
-        heat_map = [[ 0.0 for x in row] for row in pipe_map]
-        for i in range(len(pipe_map)):
-            for j in range(len(pipe_map[0])):
-                if pipe_map[i][j] == 'C':
-                    heat_map[i][j] = temp_cold
-
-                elif pipe_map[i][j] == 'H':
-                    heat_map[i][j] = temp_hot
-                else:
-                    heat_map[i][j] = temp_warm
-        return heat_map
-    '''
 
 
 if __name__ == '__main__':
