@@ -47,6 +47,14 @@ class RobotController():
         self.std_dev_temp_sensor = 10
 
     def set_motion_commands(self):
+        """
+        This is currently where the moves the robot makes are specified.
+        We can leave this here and give the students the moves they need
+        to make and let them figure out how to do it, or we can integrate
+        it into map_server.py and just tell the students to call a move
+        service that causes the map server to make the next move in the
+        list.
+        """
         self.move_list = [[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]]
 
     def initialize_maps(self):
@@ -61,6 +69,9 @@ class RobotController():
                             ['S','R','R','S','R']]
 
     def initialize_beliefs(self):
+        """
+        set the initial probability matrix - everywhere is equally likely.
+        """
         init_prob = 1.0 / float(len(self.texture_map)) / float(len(self.texture_map[0]))
         starting_beliefs = [[init_prob for row in range(len(self.texture_map[0]))]
                             for col in range(len(self.texture_map))]
@@ -88,31 +99,43 @@ class RobotController():
         return heat_map
 
     def simulate(self):
+        """
+        Kicks the whole thing off. Calls rospy.spin() after activating
+        the temperature sensor because from there on out everything happens
+        on callback functions.
+        """
         self.begin_simulation()
         rospy.spin()
 
     def begin_simulation(self):
+        """
+        Publishes to the topic that activates the temperature sensor.
+        """
         activation_message = Bool()
         activation_message.data = True
         self.temp_activator.publish(activation_message)
 
     def end_simulation(self):
+        """
+        Publishes to the topic that stops the temperature sensor at the
+        end of the simulation.
+        """
         activation_message = Bool()
         activation_message.data = False
-        print activation_message
         self.temp_activator.publish(activation_message)
         rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
-        '''
-        because of timesteps and things, this is the main sense->move->
-        evaluate->repeate loop
-        '''
+        """
+        Callback function for the temp data. Initiates the timestep.
+        """
         temp_reading = message.temperature
-        #print "robot temp reading is: ", temp_reading
         self.timestep(temp_reading)
 
     def timestep(self, temp_reading):
+        """
+        Main sense->evalute->move function
+        """
         self.update_from_temp(temp_reading)
         texture_reading = self.request_texture_reading()
         self.update_from_tex(texture_reading)
@@ -125,10 +148,17 @@ class RobotController():
             self.end_simulation()
 
     def show(self, p):
+        """
+        prints a probability matrix to the screen in a readable format
+        """
         rows = ['[' + ','.join(map(lambda x: '{0:.5f}'.format(x),r)) + ']' for r in p]
         print '[' + ',\n '.join(rows) + ']'
 
     def update_from_temp(self, temp_reading):
+        """
+        Update the beliefs about the robot's position based on a temperature
+        measurement.
+        """
         temp_probs = deepcopy(self.probability_matrix)
         num_cols = len(temp_probs[0])
         num_rows = len(temp_probs)
@@ -148,6 +178,10 @@ class RobotController():
         self.probability_matrix = temp_probs
 
     def update_from_tex(self, texture_reading):
+        """
+        Update the beliefs about the robot's position based on a texture
+        measurement.
+        """
         temp_probs = deepcopy(self.probability_matrix)
         num_cols = len(temp_probs[0])
         num_rows = len(temp_probs)
@@ -164,6 +198,10 @@ class RobotController():
         self.probability_matrix = temp_probs
 
     def request_texture_reading(self):
+        """
+        Get a texture reading from the temperature sensor node via the
+        texture request service.
+        """
         response = self.texture_requester()
         texture_reading = response.data
         return texture_reading
@@ -176,6 +214,10 @@ class RobotController():
         self.move_requester(move_command)
 
     def update_beliefs_after_move(self, move_command):
+        """
+        Update position beliefs after attempting a move based on the known
+        parameters of the motion model.
+        """
         if self.motion_model == "simple":
             temp_probs = deepcopy(self.probability_matrix)
 
