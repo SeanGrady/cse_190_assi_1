@@ -9,10 +9,12 @@ from cse_190_assi_1.msg import temperatureMessage, RobotProbabilities
 from cse_190_assi_1.srv import requestTexture, moveService
 from std_msgs.msg import Bool, String, Float32
 from collections import deque
+from read_config import read_config
 
 
 class RobotController():
     def __init__(self):
+        self.config = read_config()
         rospy.init_node("robot_controller")
         self.temperature_subscriber = rospy.Subscriber(
                 "/temp_sensor/data",
@@ -145,7 +147,7 @@ class RobotController():
         self.temp_activator.publish(activation_message)
         self.shutdown_pub.publish(True)
         rospy.sleep(1)
-        rospy.signal_shutdown("because I said so")
+        #rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
         """
