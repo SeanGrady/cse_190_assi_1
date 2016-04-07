@@ -54,49 +54,22 @@ class RobotController():
                 Bool,
                 queue_size = 10
         )
-        self.initialize_constants()
-        self.set_motion_commands()
         self.initialize_maps()
         self.initialize_beliefs()
-        self.motion_model = 'simple'
-        self.motions = deque([[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]])
+        self.motions = deque(self.config['move_list'])
         rospy.sleep(2)
         self.simulate()
 
-    def initialize_constants(self):
-        self.prob_texture_correct = 0.99
-        self.prob_move_correct = 0.75
-        self.std_dev_temp_sensor = 10
-
-    def set_motion_commands(self):
-        """
-        This is currently where the moves the robot makes are specified.
-        We can leave this here and give the students the moves they need
-        to make and let them figure out how to do it, or we can integrate
-        it into map_server.py and just tell the students to call a move
-        service that causes the map server to make the next move in the
-        list.
-        """
-        self.move_list = [[0,0],[0,1],[1,0],[1,0],[0,1],[0,1]]
-
     def initialize_maps(self):
-        pipe_map = [['C','-','H','H','-'],
-                    ['C','-','H','-','-'],
-                    ['C','-','H','-','-'],
-                    ['C','C','H','H','H']]
-        self.heat_map = self.generate_heatmap(pipe_map)
-        self.texture_map = [['S','S','S','S','R'],
-                            ['R','R','S','R','R'],
-                            ['R','S','S','S','S'],
-                            ['S','R','R','S','R']]
+        self.heat_map = self.generate_heatmap(self.config['pipe_map'])
 
     def initialize_beliefs(self):
         """
         set the initial probability matrix - everywhere is equally likely.
         """
-        init_prob = 1.0 / float(len(self.texture_map)) / float(len(self.texture_map[0]))
-        starting_beliefs = [[init_prob for row in range(len(self.texture_map[0]))]
-                            for col in range(len(self.texture_map))]
+        init_prob = 1.0 / float(len(self.config['texture_map'])) / float(len(self.config['texture_map'][0]))
+        starting_beliefs = [[init_prob for row in range(len(self.config['texture_map'][0]))]
+                            for col in range(len(self.config['texture_map']))]
         self.probability_matrix = starting_beliefs
 
     def generate_heatmap(self, pipe_map):
@@ -147,7 +120,7 @@ class RobotController():
         self.temp_activator.publish(activation_message)
         self.shutdown_pub.publish(True)
         rospy.sleep(1)
-        #rospy.signal_shutdown("because I said so")
+        rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
         """
@@ -197,10 +170,10 @@ class RobotController():
         num_rows = len(temp_probs)
         for i in range(num_rows):
             for j in range(num_cols):
-                if self.std_dev_temp_sensor == 0:
+                if self.config['temp_noise_std_dev'] == 0:
                     prob_hit = heat_map[i][j] == temp_reading
                 else:
-                    prob_hit = 1/(m.sqrt(2*m.pi)*self.std_dev_temp_sensor)*m.e**(-0.5*(float(self.heat_map[i][j] - temp_reading)/self.std_dev_temp_sensor)**2)
+                    prob_hit = 1/(m.sqrt(2*m.pi)*self.config['temp_noise_std_dev'])*m.e**(-0.5*(float(self.heat_map[i][j] - temp_reading)/self.config['temp_noise_std_dev'])**2)
                 temp_probs[i][j] = prob_hit * self.probability_matrix[i][j]
 
         total_prob = sum(sum(p) for p in temp_probs)
@@ -220,8 +193,8 @@ class RobotController():
         num_rows = len(temp_probs)
         for i in range(num_rows):
             for j in range(num_cols):
-                hit = int(self.texture_map[i][j] == texture_reading)
-                temp_probs[i][j] = (self.prob_texture_correct * hit + (1 - self.prob_texture_correct) * (1 - hit)) * self.probability_matrix[i][j]
+                hit = int(self.config['texture_map'][i][j] == texture_reading)
+                temp_probs[i][j] = (self.config['prob_tex_correct'] * hit + (1 - self.config['prob_tex_correct']) * (1 - hit)) * self.probability_matrix[i][j]
 
         total_prob = sum(sum(p) for p in temp_probs)
         if total_prob == 0:
@@ -251,23 +224,22 @@ class RobotController():
         Update position beliefs after attempting a move based on the known
         parameters of the motion model.
         """
-        if self.motion_model == "simple":
-            temp_probs = deepcopy(self.probability_matrix)
+        temp_probs = deepcopy(self.probability_matrix)
 
-            num_cols = len(temp_probs[0])
-            num_rows = len(temp_probs)
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    start_x = (i - move_command[0]) % num_rows
-                    start_y = (j - move_command[1]) % num_cols
-                    temp_probs[i][j] = self.prob_move_correct * self.probability_matrix[start_x][start_y] + (1 - self.prob_move_correct) * temp_probs[i][j]
+        num_cols = len(temp_probs[0])
+        num_rows = len(temp_probs)
+        for i in range(num_rows):
+            for j in range(num_cols):
+                start_x = (i - move_command[0]) % num_rows
+                start_y = (j - move_command[1]) % num_cols
+                temp_probs[i][j] = self.config['prob_move_correct'] * self.probability_matrix[start_x][start_y] + (1 - self.config['prob_move_correct']) * temp_probs[i][j]
 
-            total_prob = sum(sum(p) for p in temp_probs)
-            if total_prob == 0:
-                print "sum of probabilities is zero"
-            else:
-                temp_probs = [[prob/total_prob for prob in row] for row in temp_probs]
-            self.probability_matrix = temp_probs
+        total_prob = sum(sum(p) for p in temp_probs)
+        if total_prob == 0:
+            print "sum of probabilities is zero"
+        else:
+            temp_probs = [[prob/total_prob for prob in row] for row in temp_probs]
+        self.probability_matrix = temp_probs
 
 
 if __name__ == '__main__':
