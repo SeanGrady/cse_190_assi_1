@@ -5,9 +5,9 @@ import random as r
 import math as m
 import numpy as np
 from copy import deepcopy
-from cse_190_assi_1.msg import temperatureMessage
+from cse_190_assi_1.msg import temperatureMessage, RobotProbabilities
 from cse_190_assi_1.srv import requestTexture, moveService
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String, Float32
 from collections import deque
 
 
@@ -29,6 +29,26 @@ class RobotController():
         )
         self.temp_activator = rospy.Publisher(
                 "/temp_sensor/activation",
+                Bool,
+                queue_size = 10
+        )
+        self.temp_res_pub = rospy.Publisher(
+                "/results/temperature_data",
+                Float32,
+                queue_size = 10
+        )
+        self.tex_res_pub = rospy.Publisher(
+                "/results/texture_data",
+                String,
+                queue_size = 10
+        )
+        self.prob_res_pub = rospy.Publisher(
+                "/results/probabilities",
+                RobotProbabilities,
+                queue_size = 10
+        )
+        self.shutdown_pub = rospy.Publisher(
+                "/map_node/sim_complete",
                 Bool,
                 queue_size = 10
         )
@@ -123,6 +143,10 @@ class RobotController():
         activation_message = Bool()
         activation_message.data = False
         self.temp_activator.publish(activation_message)
+        self.shutdown_pub.publish(True)
+        print "robot done, waiting"
+        rospy.sleep(5)
+        print "done waiting, ending now"
         rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
@@ -139,13 +163,22 @@ class RobotController():
         self.update_from_temp(temp_reading)
         texture_reading = self.request_texture_reading()
         self.update_from_tex(texture_reading)
-        print "Robot sensor values: ", texture_reading, temp_reading
+        self.publish_sensor_values(texture_reading, temp_reading)
         if len(self.motions) > 0:
             self.move_and_update(self.motions.popleft())
+            self.publish_beliefs()
         else:
             print "Motion complete"
             self.show(self.probability_matrix)
             self.end_simulation()
+
+    def publish_sensor_values(self, tex, temp):
+        self.tex_res_pub.publish(tex)
+        self.temp_res_pub.publish(temp)
+
+    def publish_beliefs(self):
+        prob_list = [p for row in self.probability_matrix for p in row]
+        self.prob_res_pub.publish(prob_list)
 
     def show(self, p):
         """
