@@ -144,9 +144,7 @@ class RobotController():
         activation_message.data = False
         self.temp_activator.publish(activation_message)
         self.shutdown_pub.publish(True)
-        print "robot done, waiting"
-        rospy.sleep(5)
-        print "done waiting, ending now"
+        rospy.sleep(1)
         rospy.signal_shutdown("because I said so")
 
     def handle_incoming_temperature_data(self, message):
