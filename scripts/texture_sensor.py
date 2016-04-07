@@ -6,9 +6,11 @@ import math as m
 import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData, requestTexture 
+from read_config import read_config
 
 class TexSensor():
     def __init__(self):
+        self.config = read_config()
         rospy.init_node("texture_sensor")
         self.texture_requester = rospy.ServiceProxy(
                 "requestMapData",
@@ -19,9 +21,7 @@ class TexSensor():
                 requestTexture,
                 self.handle_texture_request
         )
-        self.prob_correct = 0.99
-        self.seed = 0
-        r.seed(self.seed)
+        r.seed(self.config['seed'])
         rospy.sleep(1)
         rospy.spin()
 
@@ -44,7 +44,7 @@ class TexSensor():
 
     def add_noise(self, measurement):
         roll = r.uniform(0,1)
-        if roll < self.prob_correct:
+        if roll < self.config['prob_tex_correct']:
             return measurement
         else:
             if measurement == 'R':
