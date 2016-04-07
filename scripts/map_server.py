@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import json
 import random as r
 import math as m
 import numpy as np
@@ -10,17 +11,8 @@ from cse_190_assi_1.srv import requestMapData, moveService
 
 class MapServer():
     def __init__(self):
-        self.uncertain_motion = True
-        self.prob_move_correct = .75
+        self.load_parameters()
         rospy.init_node("map_server")
-        self.pipe_map = [['C','-','H','H','-'],
-                         ['C','-','H','-','-'],
-                         ['C','-','H','-','-'],
-                         ['C','C','H','H','H']]
-        self.texture_map = [['S','S','S','S','R'],
-                            ['R','R','S','R','R'],
-                            ['R','S','S','S','S'],
-                            ['S','R','R','S','R']]
         self.map_data_service = rospy.Service(
                 "requestMapData",
                 requestMapData,
@@ -39,16 +31,27 @@ class MapServer():
                 [-1,0],
                 [0,-1]
         ]
-        self.seed = 0
         r.seed(self.seed)
         print "starting pos: ", self.pos
         rospy.spin()
+
+    def load_parameters(self):
+        with open('parameters.json') as param_file:
+            param_dict = json.load(param_file)
+
+        self.pipe_map = param_dict['pipe map']
+        self.texture_map = param_dict['texture map']
+        self.uncertain_motion = param_dict['uncertain motion']
+        self.prob_move_correct = param_dict['prob move correct']
+        self.moves = param_dict['move list']
+        self.seed = param_dict['seed']
+        self.starting_position = param_dict['starting pos']
 
     def initialize_position(self):
         """
         Set starting position.
         """
-        pos = [3, 3]
+        pos = self.starting_position
         return pos
 
     def handle_data_request(self, request):

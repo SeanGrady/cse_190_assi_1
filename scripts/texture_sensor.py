@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import json
 import random as r
 import math as m
 import numpy as np
@@ -9,6 +10,7 @@ from cse_190_assi_1.srv import requestMapData, requestTexture
 
 class TexSensor():
     def __init__(self):
+        self.load_parameters()
         rospy.init_node("texture_sensor")
         self.texture_requester = rospy.ServiceProxy(
                 "requestMapData",
@@ -19,11 +21,16 @@ class TexSensor():
                 requestTexture,
                 self.handle_texture_request
         )
-        self.prob_correct = 0.99
-        self.seed = 0
         r.seed(self.seed)
         rospy.sleep(1)
         rospy.spin()
+
+    def load_parameters(self):
+        with open('parameters.json') as param_file:
+            param_dict = json.load(param_file)
+
+        self.prob_correct = param_dict['prob tex correct']
+        self.seed = param_dict['seed']
 
     def handle_texture_request(self, request):
         """
