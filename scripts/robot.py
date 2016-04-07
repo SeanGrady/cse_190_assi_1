@@ -230,9 +230,20 @@ class RobotController():
         num_rows = len(temp_probs)
         for i in range(num_rows):
             for j in range(num_cols):
-                start_x = (i - move_command[0]) % num_rows
-                start_y = (j - move_command[1]) % num_cols
-                temp_probs[i][j] = self.config['prob_move_correct'] * self.probability_matrix[start_x][start_y] + (1 - self.config['prob_move_correct']) * temp_probs[i][j]
+                possible_starts = [
+                        [(i-1) % num_rows, j],
+                        [i, j],
+                        [(i+1) % num_rows, j],
+                        [i, (j-1) % num_cols],
+                        [i, (j+1) % num_cols]
+                ]
+                correct_start = [(i - move_command[0]) % num_rows, (j - move_command[1]) % num_cols]
+                incorrect_starts = deepcopy(possible_starts)
+                incorrect_starts.remove(correct_start)
+                print possible_starts, incorrect_starts, correct_start
+                temp_probs[i][j] = self.config['prob_move_correct'] * self.probability_matrix[correct_start[0]][correct_start[1]]
+                for start in incorrect_starts:
+                    temp_probs[i][j] += ((1 - self.config['prob_move_correct'])/4) * temp_probs[start[0]][start[1]]
 
         total_prob = sum(sum(p) for p in temp_probs)
         if total_prob == 0:
