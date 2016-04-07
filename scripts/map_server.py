@@ -6,21 +6,14 @@ import math as m
 import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData, moveService
+from read_config import read_config
 
 
 class MapServer():
     def __init__(self):
-        self.uncertain_motion = True
-        self.prob_move_correct = .75
+        self.config = read_config()
+        self.config["prob_move_correct"] = .75
         rospy.init_node("map_server")
-        self.pipe_map = [['C','-','H','H','-'],
-                         ['C','-','H','-','-'],
-                         ['C','-','H','-','-'],
-                         ['C','C','H','H','H']]
-        self.texture_map = [['S','S','S','S','R'],
-                            ['R','R','S','R','R'],
-                            ['R','S','S','S','S'],
-                            ['S','R','R','S','R']]
         self.map_data_service = rospy.Service(
                 "requestMapData",
                 requestMapData,
@@ -32,15 +25,7 @@ class MapServer():
                 self.handle_move_request
         )
         self.pos = self.initialize_position()
-        self.move_list = [
-                [0,0],
-                [1,0],
-                [0,1],
-                [-1,0],
-                [0,-1]
-        ]
-        self.seed = 0
-        r.seed(self.seed)
+        r.seed(self.config['seed'])
         print "starting pos: ", self.pos
         rospy.spin()
 
@@ -48,7 +33,7 @@ class MapServer():
         """
         Set starting position.
         """
-        pos = [3, 3]
+        pos = self.config["starting_pos"]
         return pos
 
     def handle_data_request(self, request):
@@ -57,30 +42,30 @@ class MapServer():
         data to other nodes.
         """
         if request.data_type == "temp":
-            temp = self.pipe_map[self.pos[0]][self.pos[1]]
+            temp = self.config['pipe_map'][self.pos[0]][self.pos[1]]
             return temp
         if request.data_type == "tex":
-            tex = self.texture_map[self.pos[0]][self.pos[1]]
+            tex = self.config['texture_map'][self.pos[0]][self.pos[1]]
             return tex
 
     def handle_move_request(self, request):
         """
         Service that moves the robot according to a move request.
-        self.uncertain_motion determines the motion model used: either
+        self.config['uncertain_motion'] determines the motion model used: either
         certain motion or correct motion with a set probability (random
         otherwise).
         """
         move = list(request.move)
-        if self.uncertain_motion:
+        if self.config['uncertain_motion']:
             roll = r.uniform(0,1)
-            if roll < self.prob_move_correct:
+            if roll < self.config["prob_move_correct"]:
                 self.make_move(move)
             else:
-                possible_moves = deepcopy(self.move_list)
+                possible_moves = deepcopy(self.config['move_list'])
                 possible_moves.remove(move)
                 random_move = r.choice(possible_moves)
                 self.make_move(random_move)
-        elif not self.uncertain_motion:
+        elif not self.config['uncertain_motion']:
             self.make_move(move)
         return []
 
@@ -88,8 +73,8 @@ class MapServer():
         """
         Changes the robot's position
         """
-        num_rows = len(self.pipe_map)
-        num_cols = len(self.pipe_map[0])
+        num_rows = len(self.config['pipe_map'])
+        num_cols = len(self.config['pipe_map'][0])
         self.pos[0] = (self.pos[0] + move[0]) % num_rows
         self.pos[1] = (self.pos[1] + move[1]) % num_cols
         print self.pos

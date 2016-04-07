@@ -8,9 +8,11 @@ from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData
 from cse_190_assi_1.msg import temperatureMessage
 from std_msgs.msg import Bool
+from read_config import read_config
 
 class TempSensor():
     def __init__(self):
+        self.config = read_config()
         rospy.init_node("temperature_sensor")
         self.temperature_requester = rospy.ServiceProxy(
                 "requestMapData",
@@ -31,11 +33,9 @@ class TempSensor():
                 'C': 20.0,
                 '-': 25.0
         }
-        self.std_noise = 10
         self.temp_message = temperatureMessage()
-        self.seed = 0
         self.sensor_on = False
-        random.seed(self.seed)
+        random.seed(self.config['seed'])
         self.sensor_loop()
 
     def handle_activation_message(self, message):
@@ -74,7 +74,7 @@ class TempSensor():
         """
         Returns temperature measurement after adding Gaussian noise
         """
-        noise = m.ceil(random.gauss(0, self.std_noise)*100.)/100.
+        noise = m.ceil(random.gauss(0, self.config['temp_noise_std_dev'])*100.)/100.
         noisy_measurement = true_val + noise
         #print "noisy temp: ", noisy_measurement
         return noisy_measurement
