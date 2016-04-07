@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import json
 import random
 import math as m
 import numpy as np
@@ -12,7 +11,6 @@ from std_msgs.msg import Bool
 
 class TempSensor():
     def __init__(self):
-        self.load_parameters()
         rospy.init_node("temperature_sensor")
         self.temperature_requester = rospy.ServiceProxy(
                 "requestMapData",
@@ -33,17 +31,12 @@ class TempSensor():
                 'C': 20.0,
                 '-': 25.0
         }
+        self.std_noise = 10
         self.temp_message = temperatureMessage()
+        self.seed = 0
         self.sensor_on = False
         random.seed(self.seed)
         self.sensor_loop()
-
-    def load_parameters(self):
-        with open('parameters.json') as param_file:
-            param_dict = json.load(param_file)
-
-        self.std_noise = param_dict['temp noise std dev']
-        self.seed = param_dict['seed']
 
     def handle_activation_message(self, message):
         """
