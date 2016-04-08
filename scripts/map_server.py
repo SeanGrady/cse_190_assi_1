@@ -11,6 +11,7 @@ from read_config import read_config
 
 class MapServer():
     def __init__(self):
+        """Read config file and setup ROS things"""
         self.config = read_config()
         self.config["prob_move_correct"] = .75
         rospy.init_node("map_server")
@@ -30,17 +31,12 @@ class MapServer():
         rospy.spin()
 
     def initialize_position(self):
-        """
-        Set starting position.
-        """
+        """Set starting position."""
         pos = self.config["starting_pos"]
         return pos
 
     def handle_data_request(self, request):
-        """
-        Map data service that provides ground truth temperature or texture
-        data to other nodes.
-        """
+        """Service to provide ground truth data to sensors"""
         if request.data_type == "temp":
             temp = self.config['pipe_map'][self.pos[0]][self.pos[1]]
             return temp
@@ -49,11 +45,11 @@ class MapServer():
             return tex
 
     def handle_move_request(self, request):
-        """
-        Service that moves the robot according to a move request.
-        self.config['uncertain_motion'] determines the motion model used: either
-        certain motion or correct motion with a set probability (random
-        otherwise).
+        """Service that moves the robot according to a move request.
+
+        self.config['uncertain_motion'] determines the motion model
+        used: either certain motion or motion with a set probability
+        (randomotherwise).
         """
         move = list(request.move)
         if self.config['uncertain_motion']:
@@ -70,23 +66,12 @@ class MapServer():
         return []
 
     def make_move(self, move):
-        """
-        Changes the robot's position
-        """
+        """Changes the robot's position"""
         num_rows = len(self.config['pipe_map'])
         num_cols = len(self.config['pipe_map'][0])
         self.pos[0] = (self.pos[0] + move[0]) % num_rows
         self.pos[1] = (self.pos[1] + move[1]) % num_cols
         #print self.pos
-
-    def handle_request_maps(self, request):
-        """
-        Might implement a way for the robot node to ask for the maps, rather
-        than have the students hard-code it into the robot (the robot node
-        does need to have the original pipe map and know how to go from that
-        to actual temperature though)
-        """
-        pass
 
 
 if __name__ == '__main__':

@@ -10,8 +10,10 @@ from cse_190_assi_1.msg import temperatureMessage
 from std_msgs.msg import Bool
 from read_config import read_config
 
+
 class TempSensor():
     def __init__(self):
+        """Read config file and setup ROS things"""
         self.config = read_config()
         rospy.init_node("temperature_sensor")
         self.temperature_requester = rospy.ServiceProxy(
@@ -39,8 +41,10 @@ class TempSensor():
         self.sensor_loop()
 
     def handle_activation_message(self, message):
-        """
-        Callback function for the activation subscriber.
+        """Callback function for the activation subscriber.
+        
+        If the incoming message has a value of True, the node begins
+        publishing temperature data at a rate of 1Hz.
         """
         #print "incoming message, ", message
         switch_value = message.data
@@ -49,10 +53,7 @@ class TempSensor():
             self.rate = rospy.Rate(1)
 
     def sensor_loop(self):
-        """
-        Main loop to publish a temperature measurement every second (with
-        gaussian noise).
-        """
+        """Publish a noisy temperature measurement every second."""
         while not rospy.is_shutdown():
             if self.sensor_on:
                 measurement = self.take_measurement()
@@ -62,21 +63,16 @@ class TempSensor():
                 self.rate.sleep()
 
     def take_measurement(self):
-        """
-        Get the temperature of the current square from the map node
-        """
+        """Get the temperature of the current square."""
         temp_response = self.temperature_requester('temp')
         temperature = temp_response.data
         temp = self.temp_dict[temperature]
         return temp
 
     def add_noise(self, true_val):
-        """
-        Returns temperature measurement after adding Gaussian noise
-        """
+        """Returns measurement after adding Gaussian noise."""
         noise = m.ceil(random.gauss(0, self.config['temp_noise_std_dev'])*100.)/100.
         noisy_measurement = true_val + noise
-        #print "noisy temp: ", noisy_measurement
         return noisy_measurement
 
 
