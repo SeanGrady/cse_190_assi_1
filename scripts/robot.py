@@ -240,7 +240,6 @@ class RobotController():
                 correct_start = [(i - move_command[0]) % num_rows, (j - move_command[1]) % num_cols]
                 incorrect_starts = deepcopy(possible_starts)
                 incorrect_starts.remove(correct_start)
-                print possible_starts, incorrect_starts, correct_start
                 temp_probs[i][j] = self.config['prob_move_correct'] * self.probability_matrix[correct_start[0]][correct_start[1]]
                 for start in incorrect_starts:
                     temp_probs[i][j] += ((1 - self.config['prob_move_correct'])/4) * temp_probs[start[0]][start[1]]
