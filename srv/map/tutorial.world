@@ -10,7 +10,7 @@ define floorplan model
   gui_grid 0
   gui_outline 0
   gripper_return 0
-  fiducial_return 1
+  fiducial_return 0
   laser_return 1
 )
 
@@ -19,18 +19,18 @@ interval_sim 100  # simulation timestep in milliseconds
 
 window
 (
-  size [ 200.0 200.0 ]
-  center [ 100.0 100.0 ]
+  size [ 800.0 400.0 ]
+  center [ 400.0 200.0 ]
   rotate [ 0.0 0.0 ]
-  scale 1
+  scale 30
 )
 
 floorplan
 (
   name "tutorial"
   bitmap "temp1.png"
-  size [ 200.0 200.0 1.0 ]
-  pose [ 100.0  100.0 0.0 0.0 ]
+  size [ 800.0 400.0 1.0 ]
+  pose [ 400.0  200.0 0.0 0.0 ]
 )
 
 #block(pose [ 4.0 0.75 0.0 0.0] color "red")
@@ -39,10 +39,10 @@ floorplan
 
 define topurg ranger
 (
-  sensor( 			
-    range [ 0.0  100.0 ]
+	sensor( 			
+    range [ 0.0  30.0 ]
     fov 270.25
-    samples 1081
+   samples 1081
   )
 
   # generic model properties
@@ -53,12 +53,11 @@ define topurg ranger
 
 define robot_in_stage position
 (
-  size [2 2 2]
+  #size [0.415 0.392 0.25]
+  size [1 1 1]
   origin [0.0 0.0 0.0 0.0]
   gui_nose 1
   drive "diff"
-  velocity_bounds [-40 40 -1 1 -1 1 -180 360 ]					
-  acceleration_bounds [-1 1 -1 1 -1 1 -180 360]
   topurg(pose [ 0.050 0.000 0 0.000 ])
 )
 #define kinect ranger
@@ -90,7 +89,7 @@ define robot_in_stage position
 #)
 
 # throw in a robot
-robot_in_stage( pose [ 100.0 100.0 0.0 0.0 ] name "robot_in_stage" color "red")
+robot_in_stage( pose [ 25.0 25.0 0.0 0.0 ] name "robot_in_stage" color "red")
 
 #turtlebot
 #(

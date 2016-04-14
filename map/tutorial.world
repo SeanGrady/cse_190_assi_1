@@ -1,3 +1,29 @@
+define topurg ranger
+(
+	sensor( 			
+    range [ 0.0  100.0 ]
+    fov 270.25
+   samples 1081
+  )
+
+  # generic model properties
+  color "black"
+  size [ 0.05 0.05 0.1 ]
+)
+
+define erratic position
+(
+  #size [0.415 0.392 0.25]
+  #DONT CHANGE SIZE, lot of random issues pop up if you try to increase it
+  size [0.35 0.35 0.25]
+  origin [0 0 0 0]
+  gui_nose 1
+  drive "diff"
+  velocity_bounds [-40 40 -1 1 -1 1 -180 360 ]					
+  acceleration_bounds [-1 1 -1 1 -1 1 -180 360]
+  topurg(pose [ 0.050 0.000 0 0.000 ])
+)
+
 define floorplan model
 (
   # sombre, sensible, artistic
@@ -8,93 +34,35 @@ define floorplan model
 
   gui_nose 0
   gui_grid 0
+
   gui_outline 0
   gripper_return 0
   fiducial_return 0
   laser_return 1
 )
 
+# set the resolution of the underlying raytrace model in meters
 resolution 0.02
+
 interval_sim 100  # simulation timestep in milliseconds
 
+
 window
-(
-  size [ 800.0 400.0 ]
-  center [ 400.0 200.0 ]
-  rotate [ 0.0 0.0 ]
-  scale 30
+( 
+  size [ 200.000 200.000 ] 
+
+  rotate [ 0.000 0.0 ]
+  scale 1 
 )
 
+# load an environment bitmap
 floorplan
-(
+( 
   name "tutorial"
   bitmap "temp1.png"
-  size [ 800.0 400.0 1.0 ]
-  pose [ 400.0  200.0 0.0 0.0 ]
+  size [200.0 200.0 0.5]
+  pose [ 100.0 100.0 0.0 0.0 ]
 )
-
-#block(pose [ 4.0 0.75 0.0 0.0] color "red")
-#block(pose [0.75  3.0 0.0 0.0] color "green")
-#block(pose [ 6.0  4.5 0.0 0.0] color "blue")
-
-define topurg ranger
-(
-	sensor( 			
-    range [ 0.0  30.0 ]
-    fov 270.25
-   samples 1081
-  )
-
-  # generic model properties
-  color "black"
-  size [ 0.05 0.05 0.1 ]
-)
-
-
-define robot_in_stage position
-(
-  #size [0.415 0.392 0.25]
-  size [1 1 1]
-  origin [0.0 0.0 0.0 0.0]
-  gui_nose 1
-  drive "diff"
-  topurg(pose [ 0.050 0.000 0 0.000 ])
-)
-#define kinect ranger
-#(
-#  sensor
-#  (
-#    range_max 6.5
-#    fov 58.0
-#    samples 640
-#  )
-#  # generic model properties
-#  color "black"
-#  size [ 0.06 0.15 0.03 ]
-#)
-
-#define turtlebot position
-#(
-#  pose [ 0.0 0.0 0.0 0.0 ]
-#
-#  odom_error [0.03 0.03 999999 999999 999999 0.02]
-#
-#  size [ 0.2552 0.2552 0.40 ]
-#  origin [ 0.0 0.0 0.0 0.0 ]
-#  gui_nose 1
-#  drive "diff"
-#  color "gray"
-#  
-#  kinect(pose [ -0.1 0.0 -0.11 0.0 ])
-#)
 
 # throw in a robot
-robot_in_stage( pose [ 25.0 25.0 0.0 0.0 ] name "robot_in_stage" color "red")
-
-#turtlebot
-#(
-#  pose [ 2.0 2.0 0.0 0.0 ]
-#  name "turtlebot"
-#  color "black"
-#)
-
+erratic( pose [ 100.0 100.0 0.0 0.0 ] name "era" color "red")

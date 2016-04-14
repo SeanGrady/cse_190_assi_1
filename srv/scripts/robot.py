@@ -12,8 +12,7 @@ from collections import deque
 from read_config import read_config
 
 from nav_msgs.msg import OccupancyGrid, MapMetaData
-from geometry_msgs.msg import Pose, PoseArray, PointStamped, Quaternion, Point, Twist
-from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Pose, PoseArray, PointStamped, Quaternion, Point
 import tf
 
 import map_utils
@@ -34,64 +33,72 @@ class Particle:
 	self.x = r.random() * float(map_message.info.width)
 	self.y = r.random() * float(map_message.info.height)
 	self.theta = r.random() * 2 * pi
-	self.pose_update(self.x, self.y, self.theta)
-	self.weight = weight
+	self._pose = Pose()
+        self._pose.position.x = self.x
+        self._pose.position.y = self.y
+        quat = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+        self._pose.orientation.x = quat[0]
+        self._pose.orientation.y = quat[1]
+        self._pose.orientation.z = quat[2]
+        self._pose.orientation.w = quat[3]
 
-    def pose_update(self, x, y, theta):
-	self.pose = Pose()
-        self.pose.position.x = x
-        self.pose.position.y = y
+    @property
+    def x(self):
+        """ x position in meters"""
+	print "x getter"
+        return self._pose.position.x
+
+    @x.setter
+    def x(self, x):
+	print "x setter"
+        self._pose.position.x = x
+
+    @property
+    def y(self):
+        """ y position in meters"""
+        return self._pose.position.y
+
+    @y.setter
+    def y(self, y):
+        self._pose.position.y = y
+
+    @property
+    def theta(self):
+        """ Orientation in radians. """
+        quat = np.array([self._pose.orientation.x,
+                         self._pose.orientation.y,
+                         self._pose.orientation.z,
+                         self._pose.orientation.w])
+        euler = tf.transformations.euler_from_quaternion(quat)
+        return euler[2]
+
+    @theta.setter
+    def theta(self, theta):
         quat = tf.transformations.quaternion_from_euler(0, 0, theta)
-        self.pose.orientation.x = quat[0]
-        self.pose.orientation.y = quat[1]
-        self.pose.orientation.z = quat[2]
-        self.pose.orientation.w = quat[3]
-	
+        self._pose.orientation.x = quat[0]
+        self._pose.orientation.y = quat[1]
+        self._pose.orientation.z = quat[2]
+        self._pose.orientation.w = quat[3]
 
-    def sense(self, scan_msg, likelihood_field):
-        xs, ys = self.laser_range_end(scan_msg)	
-        total_prob = 0
-	#TODO Step used : 10 (amcl uses 30)
-        #for i in range(0, len(xs), 10):
-        for i in range(0, len(xs), 30):
-            likelihood = likelihood_field.get_cell(xs[i], ys[i])
-            if np.isnan(likelihood):
-                likelihood = 0
-	    #pz=(laser_z_hit * likelihood + laser_z_rand)
-            #total_prob += np.log(pz)
-	    pz=(laser_z_hit * likelihood + laser_z_rand*float(1.0/scan_msg.range_max))
-            total_prob += pz*pz*pz
+    @property
+    def pose(self):
+        """ Pose of this particle as a geometry_msgs/Pose object """
+        return self._pose
 
-        #self.weight *= np.exp(total_prob)
-        self.weight *= total_prob
-	return self.weight
+    @pose.setter
+    def pose(self, pose):
+        self._pose = copy.copy(pose)
 
-    def laser_range_end(self, scan_msg):
-        theta_beam = np.arange(scan_msg.angle_min, scan_msg.angle_max,
-                               scan_msg.angle_increment)
-        ranges = np.array(scan_msg.ranges)
-	
-	xs = []
-	ys = []
-
-	for i in range(len(ranges)):
-		if ranges[i] == scan_msg.range_max:
-			#print ranges[i], scan_msg.range_max
-			continue
-		#print "Obstacle Seen"
-	        xs.append(self.x + ranges[i] * np.cos(self.theta + theta_beam[i]))
-        	ys.append(self.y + ranges[i] * np.sin(self.theta + theta_beam[i]))
-
-#	if len(xs) > 0 and len(ys) > 0 :
-#        	# Clear out nan entries:
-#        	xs = xs[np.logical_not(np.isnan(xs))]
-#        	ys = ys[np.logical_not(np.isnan(ys))]
-#
-#        	# Clear out inf entries:
-#        	xs = xs[np.logical_not(np.isinf(xs))]
-#        	ys = ys[np.logical_not(np.isinf(ys))]
-        return xs, ys
-
+        # Now normalize the quaternion.
+        quat = np.array([pose.orientation.x,
+                         pose.orientation.y,
+                         pose.orientation.z,
+                         pose.orientation.w])
+        quat = tf.transformations.unit_vector(quat)
+        self._pose.orientation.x = quat[0]
+        self._pose.orientation.y = quat[1]
+        self._pose.orientation.z = quat[2]
+        self._pose.orientation.w = quat[3]
 
 class ParticleFilterLocalization():
 
@@ -103,15 +110,15 @@ class ParticleFilterLocalization():
 
 	#Step1: Test Particle Addition
 	#Ref: http://wiki.ros.org/amcl
+        global likelihood_field 
 	global laser_z_hit 
 	global laser_z_rand 
 	global laser_sigma_hit 
 
-	laser_z_hit = 0.90
+        likelihood_field = None
+	laser_z_hit = 0.95
 	laser_z_rand = 0.05
-	laser_sigma_hit = 2.5
-
-        self.likelihood_field = None
+	laser_sigma_hit = 0.2
 
 	#tf::TransformBroadcaster br;
 	#tf::Transform transform;
@@ -124,14 +131,12 @@ class ParticleFilterLocalization():
         self.map = None
         self.num_particles = 1000
         rospy.Subscriber('map', OccupancyGrid, self.map_callback)
-        rospy.Subscriber('base_scan', LaserScan, self.scan_callback)
-        rospy.Subscriber('pc_pub_start', PoseArray, self.particle_pub_start_callback)
+        #rospy.Subscriber('particle_pub_start', PoseArray, self.particle_pub_start_callback)
         #rospy.Subscriber('initialpose', PoseWithCovarianceStamped,self.initial_pose_callback)
 
-        self.particle_pub = rospy.Publisher('particlecloud', PoseArray, queue_size = 10)
-        self.particle_pub_start = rospy.Publisher('pc_pub_start', PoseArray, queue_size = 10, latch=True)
+        self.particle_pub = rospy.Publisher('particlecloud', PoseArray, queue_size = 10, latch=True)
+        #self.particle_pub_start = rospy.Publisher('particle_pub_start', PoseArray, 10, latch=True)
         self.likelihood_pub = rospy.Publisher('likelihood_field', OccupancyGrid, queue_size = 10, latch=True)
-        self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 10)
 
         # We need the map before we can initialize the particles.
         while not rospy.is_shutdown() and self.map is None:
@@ -141,83 +146,24 @@ class ParticleFilterLocalization():
 
 	self.init_Particles()
 
-	print "Calling Particle Pub Start"
-        self.particle_pub_start.publish(self.pose_array)
+        self.particle_pub.publish(self.pose_array)
 	rospy.sleep(1)	
 
-        if self.likelihood_field is None:
+        if likelihood_field is None:
             self.update_likelihood_field(self.map, laser_sigma_hit)
-
-        self.likelihood_pub.publish(self.likelihood_field.to_message())
-	rospy.sleep(1)
-
-	""" Perform Move, then Update Probabilities """
-	self.move(20,180)
-	self.move(10,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,-90)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(10,0)
-	self.move(10,0)
-	self.move(10,0)
-	self.move(20,0)
-	#self.laser_scan_sense(self.laser_scan_info)
-	
 
 	rospy.spin()	
 
-	""" Waiting Until Shutdown """
+	""" Waiting Until Shutdown"""
+	r = rospy.Rate(10)
 	while not rospy.is_shutdown():
-		rospy.sleep(1)	
+		r.sleep()	
 
-    def particle_pub_start_callback(self, pose_array):
-	print "Entered Particle Pub Start"
-	while not rospy.is_shutdown():
-        	self.particle_pub.publish(self.pose_array)
-		rospy.sleep(0.1)
-
-
-    def move(self, dist, angle):
-	
-    	twist = Twist()
-    	twist.angular.z = angle*pi/180; 
-    	self.cmd_vel_pub.publish(twist)
-    	rospy.sleep(1)
-	rospy.loginfo("Stopping!")
-    	twist = Twist()
-    	self.cmd_vel_pub.publish(twist)
-
-    	twist = Twist()
-    	twist.linear.x = dist;    
-    	self.cmd_vel_pub.publish(twist)
-    	rospy.sleep(1)
-	rospy.loginfo("Stopping!")
-    	twist = Twist()
-    	self.cmd_vel_pub.publish(twist)
-
-	""" Update particles odom """
-        for particle_index in range(self.num_particles):
-		self.particles[particle_index].x += dist*cos(self.particles[particle_index].theta+(angle*pi/180))*(1 + np.random.randn()*0.1) #10 percent
-		self.particles[particle_index].y += dist*sin(self.particles[particle_index].theta+(angle*pi/180))*(1 + np.random.randn()*0.1) 
-		self.particles[particle_index].theta += (angle*pi/180)*(1 + np.random.randn()*0.02)
-		self.particles[particle_index].pose_update(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
-		map_acc = map_utils.Map(self.map)
-		if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)):
-			self.particles[particle_index].weight = 0.0
-        # Publish the updated particles.
-        self.pose_array = self.create_pose_array_msg()
-	self.particles_resample()	
 
     def init_Particles(self):
         self.particles = []
         for particle_count in range(self.num_particles):
-		new_particle = Particle(self.map, float(1.0/self.num_particles))
+		new_particle = Particle(self.map, 1/self.num_particles)
 		self.particles.append(new_particle)
         # Publish the newly created particles.
         self.pose_array = self.create_pose_array_msg()
@@ -228,10 +174,9 @@ class ParticleFilterLocalization():
 
         Returns: geometry_msgs/PoseArray
         """
-	rospy.loginfo("PoseArray Update")
         pose_array = PoseArray()
         pose_array.header.stamp = rospy.Time.now()
-	#print pose_array.header.stamp
+	print pose_array.header.stamp
         pose_array.header.frame_id = 'map'
         pose_array.poses = []
         for p in self.particles:
@@ -242,11 +187,16 @@ class ParticleFilterLocalization():
         """ Store the map message in an instance variable. """
         self.map = map_msg
 
-    def scan_callback(self, laser_scan):
-	""" Laser Scan needs to keep updating a class variable so that they can be used as soon as MOVE made """
-	self.laser_scan_info = laser_scan
-
     def update_likelihood_field(self, map_msg, laser_sigma):
+        """The likelihood field is essentially a map indicating which
+        locations are likely to result in a laser hit.  Points that
+        are occupied in map_msg have the highest probability, points
+        that are farther away from occupied regions have a lower
+        probability.  The laser_sigma argument controls how quickly
+        the probability falls off.  Ideally, it should be related to
+        the precision of the laser scanner being used.
+
+        """
 
         rospy.loginfo('building Likelihood map...')
         world_map = map_utils.Map(map_msg)
@@ -259,76 +209,19 @@ class ParticleFilterLocalization():
             for j in range(world_map.grid.shape[1]):
                 all_positions.append(world_map.cell_position(i, j))
                 if world_map.grid[i, j] > .9:
-		    #print world_map.cell_position(i, j)
-		    #print world_map.grid[i, j]
                     occupied_points.append(world_map.cell_position(i, j))
 
         kdt = KDTree(occupied_points)
 
         rospy.loginfo('Constructing likelihood field from KDTree.')
-        self.likelihood_field = map_utils.Map(world_map.to_message())
+        likelihood_field = map_utils.Map(world_map.to_message())
         dists = kdt.query(all_positions, k=1)[0][:]
         probs = np.exp(-(dists**2) / (2 * laser_sigma**2))
-	#print '\n'.join(str(p) for p in probs) 
 
-        self.likelihood_field.grid = probs.reshape(self.likelihood_field.grid.shape)
+        likelihood_field.grid = probs.reshape(likelihood_field.grid.shape)
 
         rospy.loginfo('Done building likelihood field')
 
-    def particles_resample(self):
-	w = []
-	total_w = 0.0
-        for particle_index in range(self.num_particles):
-		w.append(self.particles[particle_index].sense(self.laser_scan_info, self.likelihood_field))
-		total_w += w[particle_index]
-	
-	#print '\n'.join(str(p) for p in w) 
-
-	prob_pos = []
-	alpha = []
-	#alpha = [wi/sum(w) for wi in w]
-        for i in range(self.num_particles):
-		alpha.append(w[i]/total_w)
-	
-	running_total = 0.0
-	for weight in alpha:
-	    running_total += weight
-	    prob_pos.append(running_total)
-	
-	new_particle_set = []
-	beta = r.random();
-	old_beta = beta;
-	new_beta_start = 0;
-	while (len(new_particle_set)!=self.num_particles):
-	#for i in range(self.num_particles): 
-	    s = r.uniform(beta, beta+float(1.0/self.num_particles))
-	    for j in range(self.num_particles):
-	        if j == 0 and s < prob_pos[j]:
-		    #if self.particles[j].weight != 0:
-	            	new_particle_set.append(deepcopy(self.particles[j]))
-	           	break
-	        elif s > prob_pos[j-1] and s < prob_pos[j]:
-		    #if self.particles[j].weight != 0:
-	            	new_particle_set.append(deepcopy(self.particles[j]))
-	            	break
-	                
-	    beta += float(1.0/self.num_particles)
-	    #Cyclic
-	    if (beta > 1):
-	        beta = beta-1
-	    if (beta < old_beta):
-		new_beta_start = 1
-	    if (beta > old_beta and new_beta_start == 1):
-		beta = r.random();
-		old_beta = beta;
-		new_beta_start = 0
-		
-		
-
-	self.particles = deepcopy(new_particle_set)			
-
-        # Publish the newly sampled particles.
-        self.pose_array = self.create_pose_array_msg()
 
         #self.temperature_subscriber = rospy.Subscriber(
         #        "/temp_sensor/data",
