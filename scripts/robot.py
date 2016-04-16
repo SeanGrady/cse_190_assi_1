@@ -5,13 +5,14 @@ import numpy as np
 import random as r
 from math import *
 from copy import deepcopy
-from cse_190_assi_2.msg import temperatureMessage, RobotProbabilities
-from cse_190_assi_2.srv import requestTexture, moveService
+from cse_190_assi_2_2.msg import temperatureMessage, RobotProbabilities
+from cse_190_assi_2_2.srv import requestTexture, moveService
 from std_msgs.msg import Bool, String, Float32
 from collections import deque
 from read_config import read_config
 
 from nav_msgs.msg import OccupancyGrid, MapMetaData
+from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Pose, PoseArray, PointStamped, Quaternion, Point, Twist
 from sensor_msgs.msg import LaserScan
 import tf
@@ -49,21 +50,26 @@ class Particle:
 	
 
     def sense(self, scan_msg, likelihood_field):
-        xs, ys = self.laser_range_end(scan_msg)	
+        xs, ys = self.laser_range_end(scan_msg)
+	#self.scan_markers(scan_msg)	
         total_prob = 0
+        #total_prob = 1
 	#TODO Step used : 10 (amcl uses 30)
         #for i in range(0, len(xs), 10):
-        for i in range(0, len(xs), 30):
+        for i in range(0, len(xs), 1):
             likelihood = likelihood_field.get_cell(xs[i], ys[i])
             if np.isnan(likelihood):
                 likelihood = 0
-	    #pz=(laser_z_hit * likelihood + laser_z_rand)
+	    pz=(laser_z_hit * likelihood + laser_z_rand)
             #total_prob += np.log(pz)
-	    pz=(laser_z_hit * likelihood + laser_z_rand*float(1.0/scan_msg.range_max))
+	    #pz=(laser_z_hit * likelihood + laser_z_rand*float(1.0/scan_msg.range_max))
+	    #pz=laser_z_hit * likelihood
             total_prob += pz*pz*pz
+	    #total_prob *= pz
 
         #self.weight *= np.exp(total_prob)
-        self.weight *= total_prob
+	if len(xs)>0:
+        	self.weight *= total_prob
 	return self.weight
 
     def laser_range_end(self, scan_msg):
@@ -92,6 +98,46 @@ class Particle:
 #        	ys = ys[np.logical_not(np.isinf(ys))]
         return xs, ys
 
+    def scan_markers(self, scan_msg, color=(1, 0, 0)):
+        """Returns a MarkerArray message displaying what the scan message
+        would look like from the perspective of this particle.  Just
+        for debugging.
+
+        Returns:
+           visualization_msgs/MarkerArray
+
+        """
+
+        xs, ys = self.laser_range_end(scan_msg)
+        marker_array = MarkerArray()
+        header = Marker().header
+        header.stamp = rospy.Time.now()
+        header.frame_id = 'map'
+        for i in range(len(xs)):
+            marker = Marker()
+            marker.header = header
+            marker.type = Marker.CUBE
+            marker.action = Marker.ADD
+            marker.pose.position.x = xs[i]
+            marker.pose.position.y = ys[i]
+            marker.pose.position.z = .3
+            marker.pose.orientation.w = 1.0
+            marker.id = np.array([(id(self) * 13 *  + i*17) % 2**32],
+                                 dtype='int32')[0]
+            marker.scale.x = .02
+            marker.scale.y = .02
+            marker.scale.z = .02
+
+            marker.color.a = 1.0
+            marker.color.r = color[0]
+            marker.color.g = color[1]
+            marker.color.b = color[2]
+
+            marker.lifetime = rospy.Duration(5.0)
+            marker_array.markers.append(marker)
+
+	MA_publisher.publish(marker_array)
+	#rospy.sleep(0.01) 
 
 class ParticleFilterLocalization():
 
@@ -109,7 +155,7 @@ class ParticleFilterLocalization():
 
 	laser_z_hit = 0.90
 	laser_z_rand = 0.05
-	laser_sigma_hit = 2.5
+	laser_sigma_hit = 2
 
         self.likelihood_field = None
 
@@ -128,6 +174,8 @@ class ParticleFilterLocalization():
         rospy.Subscriber('pc_pub_start', PoseArray, self.particle_pub_start_callback)
         #rospy.Subscriber('initialpose', PoseWithCovarianceStamped,self.initial_pose_callback)
 
+	global MA_publisher
+        MA_publisher = rospy.Publisher('MarkerArray', MarkerArray, queue_size = 10)
         self.particle_pub = rospy.Publisher('particlecloud', PoseArray, queue_size = 10)
         self.particle_pub_start = rospy.Publisher('pc_pub_start', PoseArray, queue_size = 10, latch=True)
         self.likelihood_pub = rospy.Publisher('likelihood_field', OccupancyGrid, queue_size = 10, latch=True)
@@ -152,21 +200,26 @@ class ParticleFilterLocalization():
 	rospy.sleep(1)
 
 	""" Perform Move, then Update Probabilities """
-	self.move(20,180)
-	self.move(10,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,-90)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(5,0)
-	self.move(10,0)
-	self.move(10,0)
-	self.move(10,0)
-	self.move(20,0)
+	self.move(10, 0.0, 1.0, 1)
+	self.move(10, 0.0, 2.0, 1)
+	self.move(100, 0.0, 2.0, 1)
+	
+	#Earlier more variance used to secure the significant particles, once somewhat localised - now to increase accuracy, the variance has to be reduced
+	laser_sigma_hit = 1
+        self.update_likelihood_field(self.map, laser_sigma_hit)
+	self.move(10, 90.0, 1.0, 1)
+	self.move(100, 90.0, 3.0, 1)
+	self.move(15.0, -90.0, 2.0, 1)
+	self.move(60.0, 0.0, 10.0, 0)
+	self.move(60.0, 180.0, 10.0, 0)
+	self.move(15.0, 0.0, 2.0, 0)
+	self.move(20.0, 0.0, 2.0, 0)
+	self.move(60.0, 0.0, 20.0, 0)
+	self.move(80.0, 180.0, 20.0, 0)
+	self.move(80, 90.0, 20.0, 0)
+	self.move(30, -90.0, 20.0, 0)
+	self.move(45, 90.0, 10.0, 0)
+	self.move(50, -90.0, 10.0, 0)
 	#self.laser_scan_sense(self.laser_scan_info)
 	
 
@@ -183,36 +236,93 @@ class ParticleFilterLocalization():
 		rospy.sleep(0.1)
 
 
-    def move(self, dist, angle):
+    def move(self, dist, angle, dist_per_move, add_noise_every_step):
 	
-    	twist = Twist()
-    	twist.angular.z = angle*pi/180; 
-    	self.cmd_vel_pub.publish(twist)
-    	rospy.sleep(1)
-	rospy.loginfo("Stopping!")
-    	twist = Twist()
-    	self.cmd_vel_pub.publish(twist)
+	if abs(angle) > 20:
+		for _ in range(18):	
+		    	twist = Twist()
+    			twist.angular.z = float(angle*pi/180.0)/18.0; #I will use 18 cycles - stage sometimes behaving wierdly during faster turns
+			print twist.angular.z;
+    			self.cmd_vel_pub.publish(twist)
+    			rospy.sleep(1)
+    			#rospy.sleep(10)
+			#rospy.loginfo("Stopping!")
+    			twist = Twist()
+    			self.cmd_vel_pub.publish(twist)
+	else: 
+		twist = Twist()
+    		twist.angular.z = float(angle*pi/180.0); 
+		print twist.angular.z;
+    		self.cmd_vel_pub.publish(twist)
+    		rospy.sleep(1)
+    		#rospy.sleep(10)
+		#rospy.loginfo("Stopping!")
+    		twist = Twist()
+    		self.cmd_vel_pub.publish(twist)
+		
 
-    	twist = Twist()
-    	twist.linear.x = dist;    
-    	self.cmd_vel_pub.publish(twist)
-    	rospy.sleep(1)
-	rospy.loginfo("Stopping!")
-    	twist = Twist()
-    	self.cmd_vel_pub.publish(twist)
-
-	""" Update particles odom """
         for particle_index in range(self.num_particles):
-		self.particles[particle_index].x += dist*cos(self.particles[particle_index].theta+(angle*pi/180))*(1 + np.random.randn()*0.1) #10 percent
-		self.particles[particle_index].y += dist*sin(self.particles[particle_index].theta+(angle*pi/180))*(1 + np.random.randn()*0.1) 
-		self.particles[particle_index].theta += (angle*pi/180)*(1 + np.random.randn()*0.02)
+		noise = 0
+		if add_noise_every_step == 1 :
+			noise =  np.random.randn()*0.05*2*pi
+		#self.particles[particle_index].theta += (angle*pi/180)*(1 + np.random.randn()*0.05)
+		self.particles[particle_index].theta += (angle*pi/180) + noise
+        	#noise = ceil(r.gauss(0, pi/36.0)*100.)/100. #5 degrees std dev
+		#self.particles[particle_index].theta += (angle*pi/180.0) + noise 
 		self.particles[particle_index].pose_update(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
-		map_acc = map_utils.Map(self.map)
-		if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)):
-			self.particles[particle_index].weight = 0.0
-        # Publish the updated particles.
-        self.pose_array = self.create_pose_array_msg()
-	self.particles_resample()	
+
+	#Moving one pixel at a time to ensure particles don't cross obstacles (UNKNOWINGLY)
+	#dist_per_move = 1.0
+	while dist != 0:
+		dist = dist - dist_per_move
+		if (dist < 0):
+			dist_per_move = dist_per_move + dist
+			dist = 0
+    		twist = Twist()
+    		#twist.linear.x = dist;    
+    		twist.linear.x = dist_per_move;     
+    		self.cmd_vel_pub.publish(twist)
+    		rospy.sleep(1)
+		#rospy.loginfo("Stopping!")
+    		twist = Twist()
+    		self.cmd_vel_pub.publish(twist)
+
+		""" Update particles odom """
+        	for particle_index in range(self.num_particles):
+			#x_sign = 1.0
+			#y_sign = 1.0
+			#if (angle > 90 and angle < 270): 
+			#	x_sign = -1.0
+			#if (angle > 180 and angle < 360):
+			#	y_sign = -1.0
+
+			self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)
+			self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)
+			if add_noise_every_step == 1 :
+				self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)*np.random.randn()*0.2 #20% 
+				self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)*np.random.randn()*0.2
+	        		noise = ceil(r.gauss(0, pi*dist_per_move/900)*100.)/100. #0.2 degree std dev per metre
+				self.particles[particle_index].theta += noise 
+			#self.particles[particle_index].theta += (angle*pi/180)*(1 + np.random.randn()*0.05)
+			#self.particles[particle_index].theta += (angle*pi/180) + np.random.randn()*0.01*2*pi
+			self.particles[particle_index].pose_update(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
+			map_acc = map_utils.Map(self.map)
+			if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)): #outside map
+				self.particles[particle_index].weight *= 0.0 
+			elif map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y) == 1: #On Obstacles
+				self.particles[particle_index].weight *=  0.0
+				
+		#Normalise Weights
+		total_weight = 0.0
+        	for particle_index in range(self.num_particles):
+			total_weight += self.particles[particle_index].weight
+        	for particle_index in range(self.num_particles):
+			self.particles[particle_index].weight /= total_weight; 
+
+        	# Publish the updated particles.
+        	self.pose_array = self.create_pose_array_msg()
+		self.particles_resample(1) # without sense	
+	self.particles_resample(0) # with sense	
 
     def init_Particles(self):
         self.particles = []
@@ -228,7 +338,7 @@ class ParticleFilterLocalization():
 
         Returns: geometry_msgs/PoseArray
         """
-	rospy.loginfo("PoseArray Update")
+	#rospy.loginfo("PoseArray Update")
         pose_array = PoseArray()
         pose_array.header.stamp = rospy.Time.now()
 	#print pose_array.header.stamp
@@ -275,11 +385,15 @@ class ParticleFilterLocalization():
 
         rospy.loginfo('Done building likelihood field')
 
-    def particles_resample(self):
+    def particles_resample(self, dont_sense):
 	w = []
 	total_w = 0.0
         for particle_index in range(self.num_particles):
 		w.append(self.particles[particle_index].sense(self.laser_scan_info, self.likelihood_field))
+		#if (dont_sense == 0):
+		#	w.append(self.particles[particle_index].sense(self.laser_scan_info, self.likelihood_field))
+		#else:
+		#	w.append(self.particles[particle_index].weight)
 		total_w += w[particle_index]
 	
 	#print '\n'.join(str(p) for p in w) 
@@ -573,4 +687,5 @@ class ParticleFilterLocalization():
 
 if __name__ == '__main__':
     pfl = ParticleFilterLocalization()
+    r.random.seed(0)
     #rc = RobotController()

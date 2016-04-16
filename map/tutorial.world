@@ -2,8 +2,8 @@ define topurg ranger
 (
 	sensor( 			
     range [ 0.0  100.0 ]
-    fov 270.25
-   samples 1081
+    fov 360
+   samples 1000
   )
 
   # generic model properties
@@ -19,9 +19,9 @@ define erratic position
   origin [0 0 0 0]
   gui_nose 1
   drive "diff"
-  velocity_bounds [-40 40 -1 1 -1 1 -180 360 ]					
-  acceleration_bounds [-1 1 -1 1 -1 1 -180 360]
-  topurg(pose [ 0.050 0.000 0 0.000 ])
+  velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]					
+  acceleration_bounds [-1 1 -1 1 -1 1 -360 360]
+  topurg(pose [ 0.000 0.000 0 0.000 ])
 )
 
 define floorplan model
@@ -49,7 +49,7 @@ interval_sim 100  # simulation timestep in milliseconds
 
 window
 ( 
-  size [ 200.000 200.000 ] 
+  size [ 300.000 200.000 ] 
 
   rotate [ 0.000 0.0 ]
   scale 1 
@@ -59,10 +59,10 @@ window
 floorplan
 ( 
   name "tutorial"
-  bitmap "temp1.png"
-  size [200.0 200.0 0.5]
-  pose [ 100.0 100.0 0.0 0.0 ]
+  bitmap "untitled.png"
+  size [259.0 194.0 0.0]
+  pose [ 129.5 97.0 0.0 0.0 ]
 )
 
 # throw in a robot
-erratic( pose [ 100.0 100.0 0.0 0.0 ] name "era" color "red")
+erratic( pose [ 125.0 90.0 0.0 0.0 ] name "era" color "red")

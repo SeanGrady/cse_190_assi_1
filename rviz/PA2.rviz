@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Grid1
         - /TF1/Frames1
+        - /Map1
         - /Odometry1
         - /PoseArray1
         - /Map2
@@ -106,7 +107,7 @@ Visualization Manager:
     - Alpha: 0.7
       Class: rviz/Map
       Color Scheme: map
-      Draw Behind: false
+      Draw Behind: true
       Enabled: true
       Name: Map
       Topic: /map
@@ -130,7 +131,7 @@ Visualization Manager:
       Position Tolerance: 0.1
       Topic: /base_pose_ground_truth
       Value: true
-    - Arrow Length: 4
+    - Arrow Length: 2
       Class: rviz/PoseArray
       Color: 255; 25; 0
       Enabled: true
@@ -168,7 +169,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -0.0399996
+      Angle: -0.00499961
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
@@ -177,11 +178,11 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 3.49455
+      Scale: 2.34715
       Target Frame: base_laser_link
       Value: TopDownOrtho (rviz)
-      X: 131.205
-      Y: 144.323
+      X: 76.6314
+      Y: 115.359
     Saved: ~
 Window Geometry:
   Displays:
