@@ -1,12 +1,4 @@
 #!/usr/bin/env python
-""" 
-Map classes that can generate and read OccupancyGrid messages.
-
-
-Author: Nathan Sprague
-Version: 3/22/13
-"""
-
 import rospy
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from geometry_msgs.msg import Pose, PointStamped, Quaternion, Point
@@ -163,5 +155,3 @@ class Map(object):
         except IndexError:
             pass
         return val
-
-

@@ -1,3 +1,4 @@
+#Laser Ranger Properties 
 define topurg ranger
 (
 	sensor( 			
@@ -5,25 +6,27 @@ define topurg ranger
     fov 360
    samples 1000
   )
-
-  # generic model properties
   color "black"
-  size [ 0.05 0.05 0.1 ]
+  size [ 0.050 0.050 0.100 ]
 )
 
-define erratic position
+#Robot Properties
+define robot position
 (
-  #size [0.415 0.392 0.25]
   #DONT CHANGE SIZE, lot of random issues pop up if you try to increase it
-  size [0.35 0.35 0.25]
-  origin [0 0 0 0]
+  size [0.350 0.350 0.250]
+  origin [0.000 0.000 0.000 0.000]
   gui_nose 1
   drive "diff"
   velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]					
   acceleration_bounds [-1 1 -1 1 -1 1 -360 360]
-  topurg(pose [ 0.000 0.000 0 0.000 ])
+  topurg(pose [ 0.000 0.000 0.000 0.000 ])
 )
 
+# throw in a robot
+robot( pose [ 229.400 99.800 0.000 -180.000 ] name "robot" color "red")
+
+#FloorPlan Properties
 define floorplan model
 (
   # sombre, sensible, artistic
@@ -43,26 +46,22 @@ define floorplan model
 
 # set the resolution of the underlying raytrace model in meters
 resolution 0.02
-
 interval_sim 100  # simulation timestep in milliseconds
 
-
+#Window Properties
 window
 ( 
-  size [ 300.000 200.000 ] 
+  size [ 612 484 ] 
 
-  rotate [ 0.000 0.0 ]
-  scale 1 
+  rotate [ 0.000 0.000 ]
+  scale 2.358 
 )
 
 # load an environment bitmap
 floorplan
 ( 
   name "tutorial"
-  bitmap "untitled.png"
-  size [259.0 194.0 0.0]
-  pose [ 129.5 97.0 0.0 0.0 ]
+  bitmap "MAP.png"
+  size [259.000 194.000 0.000]
+  pose [ 129.500 97.000 0.000 0.000 ]
 )
-
-# throw in a robot
-erratic( pose [ 125.0 90.0 0.0 0.0 ] name "era" color "red")
