@@ -67,9 +67,9 @@ class RobotLogger():
     	self.particlecloud_poses = message.poses 
 
     def turn_taken(self, message):
-        angle = message.angular.z
-        if angle > 0.0:
-	    	self.update_metric()
+        #angle = message.angular.z
+        # if angle > 0.0:
+	    self.update_metric()
 
     def update_metric(self):
     	time_elapsed_value = float(rospy.Time.now().to_sec()/60) - self.init_time #minutes
@@ -78,6 +78,9 @@ class RobotLogger():
     	var_x_value = 0.0
     	var_y_value = 0.0
     	var_angle_value = 0.0
+
+    	#print self.base_truth_x, self.base_truth_y, self.base_truth_angle
+
     	#STD DEV
     	for particle_index in range(len(self.particlecloud_poses)):
     		pose = self.particlecloud_poses[particle_index]
@@ -97,6 +100,9 @@ class RobotLogger():
     	std_dev_x_value = sqrt(norm_var_x)
     	std_dev_y_value = sqrt(norm_var_y)
     	std_dev_angle_value = sqrt(norm_var_angle)
+
+    	print std_dev_x_value, std_dev_y_value, std_dev_angle_value
+
 
     	self.std_dev_x_data.extend([std_dev_x_value])
     	self.std_dev_y_data.extend([std_dev_y_value])

@@ -114,14 +114,22 @@ class ParticleFilterLocalization():
 
 		while len(self.motions) > 0:
 			motion = self.motions.popleft();
-			# if len(self.motions) > self.move_list_size*(1/2):
-			if motion[0] != 0.0:
-				self.move(0.0, motion[0], 0.0, 1)
-			self.move(motion[1], 0.0, 10.0, 1)	
-			# else:
-			# 	if motion[0] != 0.0:
-			# 		self.move(0.0, motion[0], 0.0, 0)
-			# 	self.move(motion[1], 0.0, 20.0, 0)	
+			if len(self.motions) == self.move_list_size-1:
+				if motion[0] != 0.0:
+					self.move(0.0, motion[0], 0.0, 1)
+				self.move(motion[1], 0.0, 2.0, 1)	
+			elif len(self.motions) == self.move_list_size-2:
+				if motion[0] != 0.0:
+					self.move(0.0, motion[0], 0.0, 1)
+				self.move(motion[1], 0.0, 5.0, 1)	
+			elif len(self.motions) > self.move_list_size*(3/4):
+				if motion[0] != 0.0:
+					self.move(0.0, motion[0], 0.0, 0)
+				self.move(motion[1], 0.0, 5.0, 1)	
+			else:
+				if motion[0] != 0.0:
+			 		self.move(0.0, motion[0], 0.0, 0)
+			 	self.move(motion[1], 0.0, 5.0, 0)	
 
 	
 		#rospy.spin()	
@@ -189,10 +197,10 @@ class ParticleFilterLocalization():
 	
 				# Publish the updated particles.
 				self.pose_array = self.create_pose_array_msg()
-				self.particles_resample()
+				self.particles_resample(add_noise_every_step)
 			
 		self.pose_array = self.create_pose_array_msg()
-		self.particles_resample()
+		self.particles_resample(0)
 
 	def init_Particles(self):
 		self.particles = []
@@ -249,7 +257,7 @@ class ParticleFilterLocalization():
 		self.likelihood_field.grid = probs.reshape(self.likelihood_field.grid.shape)
 		rospy.loginfo('Done building likelihood field')
 
-	def particles_resample(self):
+	def particles_resample(self, add_noise_every_step):
 		w = []
 		total_w = 0.0
 		for particle_index in range(self.num_particles):
@@ -273,10 +281,15 @@ class ParticleFilterLocalization():
 		while (len(new_particle_set)!=self.num_particles):
 			s = r.uniform(beta, beta+float(1.0/self.num_particles))
 			for j in range(self.num_particles):
-				if j == 0 and s < prob_pos[j]:
-					new_particle_set.append(deepcopy(self.particles[j]))
-					break
-				elif s > prob_pos[j-1] and s < prob_pos[j]:
+				if (j == 0 and s < prob_pos[j]) or (s > prob_pos[j-1] and s < prob_pos[j]):
+					if add_noise_every_step == 1 :
+						noise = ceil(r.gauss(0, 0.1)*100.)/100. #0.1m std dev
+						self.particles[j].x += noise 
+						noise = ceil(r.gauss(0, 0.1)*100.)/100. #0.1m std dev
+						self.particles[j].y += noise
+						noise = ceil(r.gauss(0, pi/900)*100.)/100. #0.2 degree std dev
+						# self.particles[j].theta += noise 
+						# self.particles[j].pose = pose_update(self.particles[j].x, self.particles[j].y, self.particles[j].theta)					
 					new_particle_set.append(deepcopy(self.particles[j]))
 					break
 			
