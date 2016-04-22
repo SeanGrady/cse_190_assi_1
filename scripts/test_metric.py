@@ -124,6 +124,9 @@ class RobotLogger():
     	self.std_dev_angle_data.extend([std_dev_angle_value])
 
     	metric = (self.std_dev_x_data[0]/std_dev_x_value)+(self.std_dev_y_data[0]/std_dev_y_value)+(self.std_dev_angle_data[0]/std_dev_angle_value)
+        if (time_elapsed_value > 15):
+            metric = metric/(time_elapsed_value-14)
+
 
         #print std_dev_x_value, std_dev_y_value, std_dev_angle_value, metric
 
