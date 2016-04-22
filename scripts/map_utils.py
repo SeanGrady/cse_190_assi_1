@@ -47,20 +47,9 @@ class Map(object):
 
         if len(args) == 1 and isinstance(args[0], OccupancyGrid):
             self._init_from_message(args[0])
-        elif len(args) == 0:
-            self._init_empty(kwargs)
         else:
             raise ValueError("Constructor only supports named arguments.")
 
-
-    def _init_empty(self, kwargs):
-        """ Set up an empty map using keyword arguments. """
-        self.origin_x = kwargs.get('origin_x', -2.5)
-        self.origin_y = kwargs.get('origin_y', -2.5)
-        self.width = kwargs.get('width', 50)
-        self.height = kwargs.get('height', 50)
-        self.resolution = kwargs.get('resolution', .1)
-        self._init_numpy_grid()
 
     def _init_from_message(self, map_message):
         """
@@ -72,13 +61,6 @@ class Map(object):
         self.origin_x = map_message.info.origin.position.x
         self.origin_y = map_message.info.origin.position.y
         self.grid = self._data_to_numpy(map_message.data)
-
-
-    def _init_numpy_grid(self):
-        """
-        Initialize a default numpy array.
-        """
-        self.grid = np.zeros((self.height, self.width))
 
     def _numpy_to_data(self):
         """
@@ -97,6 +79,17 @@ class Map(object):
         """
         np_data = np.array(data).reshape(self.height, self.width)
         return np_data / 100.0
+
+    def _cell_index(self, x, y):
+        """
+        Helper method for finding map index.  x and y are in the map
+        coordinate system.
+        """
+        x -= self.origin_x
+        y -= self.origin_y
+        row = int(np.floor(y / self.resolution))
+        col = int(np.floor(x / self.resolution))
+        return row, col
 
     def to_message(self):
         """ Return a nav_msgs/OccupancyGrid representation of this map. """
@@ -118,17 +111,6 @@ class Map(object):
         x = row * self.resolution + .5 * self.resolution + self.origin_x
         y = col * self.resolution + .5 * self.resolution + self.origin_y
         return x, y
-
-    def _cell_index(self, x, y):
-        """
-        Helper method for finding map index.  x and y are in the map
-        coordinate system.
-        """
-        x -= self.origin_x
-        y -= self.origin_y
-        row = int(np.floor(y / self.resolution))
-        col = int(np.floor(x / self.resolution))
-        return row, col
 
     def set_cell(self, x, y, val):
         """
