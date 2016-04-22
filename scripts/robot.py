@@ -91,6 +91,7 @@ class ParticleFilterLocalization():
 		self.particle_pub = rospy.Publisher('particlecloud', PoseArray, queue_size = 10)
 		self.particle_pub_start = rospy.Publisher('pc_pub_start', PoseArray, queue_size = 10, latch=True)
 		self.likelihood_pub = rospy.Publisher('likelihood_field', OccupancyGrid, queue_size = 10, latch=True)
+		self.result_update_pub = rospy.Publisher("result_update", Bool, queue_size = 10)
 		self.shutdown_pub = rospy.Publisher("sim_complete", Bool, queue_size = 10)
 
 		# We need the map before we can initialize the particles.
@@ -113,6 +114,7 @@ class ParticleFilterLocalization():
 		self.move_list_size = len(self.motions)
 
 		while len(self.motions) > 0:
+			self.result_update_pub.publish(True)
 			motion = self.motions.popleft();
 			if len(self.motions) == self.move_list_size-1:
 				if motion[0] != 0.0:

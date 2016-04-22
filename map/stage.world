@@ -1,11 +1,17 @@
 #Laser Ranger Properties 
 define topurg ranger
 (
-	sensor( 			
+  #Laser Sensor 
+  #range => min & max ranger of a laser scan
+  #fov => angle of laser spread
+  #samples => number of laser scans
+
+  sensor(       
     range [ 0.0  200.0 ]
     fov 360
-   samples 1000
+    samples 1000
   )
+
   color "black"
   size [ 0.05 0.05 0.1 ]
 )
@@ -17,13 +23,16 @@ define robot position
   size [0.35 0.35 0.25]
   origin [0 0 0 0]
   gui_nose 1
+  #Differential Turn
   drive "diff"
-  velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]					
+  #Min-Max velocities for x,y,z,theta
+  velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]          
   acceleration_bounds [-1 1 -1 1 -1 1 -360 360]
+  #Laser sensor placed on the robot
   topurg(pose [ 0.000 0.000 0 0.000 ])
 )
 
-# throw in a robot
+# throw in a robot in the map
 robot( pose [ 125.0 90.0 0.0 0.0 ] name "robot" color "red")
 
 #FloorPlan Properties

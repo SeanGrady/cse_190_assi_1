@@ -21,10 +21,10 @@ class RobotLogger():
                 PoseArray,
                 self.update_particlecloud
         )
-        self.cmd_vel_sub = rospy.Subscriber(
-                "cmd_vel",
-                Twist,
-                self.turn_taken
+        self.json_update = rospy.Subscriber(
+                "result_update",
+                Bool,
+                self.result_update
         )
         self.simulation_complete_sub = rospy.Subscriber(
                 "sim_complete",
@@ -66,10 +66,28 @@ class RobotLogger():
     def update_particlecloud(self, message):
     	self.particlecloud_poses = message.poses 
 
-    def turn_taken(self, message):
-        #angle = message.angular.z
-        # if angle > 0.0:
-	    self.update_metric()
+    def result_update(self, message):
+        self.update_metric()
+        with open('time_results.json', 'w') as time:
+            time.write('{\n"time_elapsed" : ')
+            json.dump(self.time_data, time)
+            time.write('\n} \n')
+        with open('std_dev_results.json', 'w') as std_dev:
+            std_dev.write('{\n"std_dev_x" : ')
+            json.dump(self.std_dev_x_data, std_dev)
+            std_dev.write('\n} \n')
+            std_dev.write('{\n"std_dev_y" : ')
+            json.dump(self.std_dev_y_data, std_dev)
+            std_dev.write('\n} \n')
+            std_dev.write('{\n"std_dev_angle" : ')
+            json.dump(self.std_dev_angle_data, std_dev)
+            std_dev.write('\n} \n')
+        with open('metric_results.json', 'w') as metric_file:
+            metric_file.write('{\n"metric" : ')
+            json.dump(self.metric_data, metric_file)
+            metric_file.write('\n} \n')
+
+
 
     def update_metric(self):
     	time_elapsed_value = float(rospy.Time.now().to_sec()/60) - self.init_time #minutes
@@ -101,14 +119,14 @@ class RobotLogger():
     	std_dev_y_value = sqrt(norm_var_y)
     	std_dev_angle_value = sqrt(norm_var_angle)
 
-    	print std_dev_x_value, std_dev_y_value, std_dev_angle_value
-
-
     	self.std_dev_x_data.extend([std_dev_x_value])
     	self.std_dev_y_data.extend([std_dev_y_value])
     	self.std_dev_angle_data.extend([std_dev_angle_value])
 
-    	metric = float(1.0/(time_elapsed_value*(std_dev_x_value+std_dev_y_value+std_dev_angle_value)))
+    	metric = (self.std_dev_x_data[0]/std_dev_x_value)+(self.std_dev_y_data[0]/std_dev_y_value)+(self.std_dev_angle_data[0]/std_dev_angle_value)
+
+        #print std_dev_x_value, std_dev_y_value, std_dev_angle_value, metric
+
     	self.metric_data.extend([metric])
 
     def handle_shutdown(self, message):
