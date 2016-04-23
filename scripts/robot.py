@@ -77,13 +77,13 @@ class ParticleFilterLocalization():
 		global laser_z_rand 
 		global laser_sigma_hit 
 		
-		laser_z_hit = 0.90
+		laser_z_hit = 0.80
 		laser_z_rand = 0.05
 		laser_sigma_hit = 2
 		
 		self.likelihood_field = None
 		self.map = None
-		self.num_particles = 1000
+		self.num_particles = 800
 		rospy.Subscriber('map', OccupancyGrid, self.map_callback)
 		rospy.Subscriber('base_scan', LaserScan, self.scan_callback)
 		rospy.Subscriber('pc_pub_start', PoseArray, self.particle_pub_start_callback)
@@ -119,19 +119,23 @@ class ParticleFilterLocalization():
 			if len(self.motions) == self.move_list_size-1:
 				if motion[0] != 0.0:
 					self.move(0.0, motion[0], 0.0, 1)
-				self.move(motion[1], 0.0, 2.0, 1)	
+				self.move(motion[1], 0.0, 1.0, 1)	
 			elif len(self.motions) == self.move_list_size-2:
 				if motion[0] != 0.0:
 					self.move(0.0, motion[0], 0.0, 1)
-				self.move(motion[1], 0.0, 5.0, 1)	
+				self.move(motion[1], 0.0, 2.0, 1)	
 			elif len(self.motions) > self.move_list_size*(3/4):
 				if motion[0] != 0.0:
 					self.move(0.0, motion[0], 0.0, 0)
-				self.move(motion[1], 0.0, 5.0, 1)	
+				self.move(motion[1], 0.0, 10.0, 1)	
+			elif len(self.motions) != 0:
+				if motion[0] != 0.0:
+			 		self.move(0.0, motion[0], 0.0, 0)
+			 	self.move(motion[1], 0.0, 20.0, 0)	
 			else:
 				if motion[0] != 0.0:
 			 		self.move(0.0, motion[0], 0.0, 0)
-			 	self.move(motion[1], 0.0, 5.0, 0)	
+			 	self.move(motion[1], 0.0, 20.0, 0)	
 
 	
 		#rospy.spin()	
