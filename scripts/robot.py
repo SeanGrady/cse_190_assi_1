@@ -5,8 +5,6 @@ import numpy as np
 import random as r
 from math import *
 from copy import deepcopy
-from cse_190_assi_2_2.msg import temperatureMessage, RobotProbabilities
-from cse_190_assi_2_2.srv import requestTexture, moveService
 from std_msgs.msg import Bool, String, Float32
 from collections import deque
 from read_config import read_config
@@ -35,13 +33,16 @@ class Particle:
 
 	def sense(self, scan_msg, likelihood_field):
 		xs, ys = self.laser_range_end(scan_msg)
-		total_prob = 0
-		for i in range(0, len(xs), 1):
+		#total_prob = 0
+		total_prob = 1
+
+		for i in range(0, len(xs), 30):
 		    likelihood = likelihood_field.get_cell(xs[i], ys[i])
 		    if np.isnan(likelihood):
 		        likelihood = 0
 		    	pz=(laser_z_hit * likelihood + laser_z_rand)
 			total_prob += pz*pz*pz
+			#total_prob *= pz
 		
 			if len(xs)>0:
 				self.weight *= total_prob
@@ -77,12 +78,15 @@ class ParticleFilterLocalization():
 		global laser_z_rand 
 		global laser_sigma_hit 
 		
+		#TODO Put in config
 		laser_z_hit = 0.80
 		laser_z_rand = 0.05
 		laser_sigma_hit = 2
 		
 		self.likelihood_field = None
 		self.map = None
+
+		#TODO Put in config (Comment as "Can Change")
 		self.num_particles = 800
 		rospy.Subscriber('map', OccupancyGrid, self.map_callback)
 		rospy.Subscriber('base_scan', LaserScan, self.scan_callback)
@@ -103,6 +107,7 @@ class ParticleFilterLocalization():
 		self.particle_pub_start.publish(self.pose_array)
 		rospy.sleep(1)	
 		
+		#TODO Remove "if"
 		if self.likelihood_field is None:
 			self.update_likelihood_field(self.map, laser_sigma_hit)
 		
@@ -114,10 +119,12 @@ class ParticleFilterLocalization():
 		self.move_list_size = len(self.motions)
 
 		self.first_move = 1		
+
 		while len(self.motions) > 0:
 			self.result_update_pub.publish(True)
 			motion = self.motions.popleft();
 
+			# Use the first move to synthesize partiles close to robot (add variations to motion model)
 			if self.first_move == 1:
 				if motion[0] != 0.0:
 					self.move(0.0, motion[0], 0.0, 1)
@@ -174,17 +181,17 @@ class ParticleFilterLocalization():
 					self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)
 					self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)
 
-					# if add_noise_every_step == 1 :
-					self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)*np.random.randn()*0.1 #20% 
-					self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)*np.random.randn()*0.1
-					noise = ceil(r.gauss(0, pi*dist_per_move/1800)*100.)/100. #0.2 degree std dev per metre
-					self.particles[particle_index].theta += noise 
+					if add_noise_every_step == 1 :
+						self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)*np.random.randn()*0.4 
+						self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)*np.random.randn()*0.4
+						noise = ceil(r.gauss(0, pi*dist_per_move/200)*100.)/100. #0.2 degree std dev per metre
+						self.particles[particle_index].theta += noise 
 
 					self.particles[particle_index].pose = get_pose(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
 					map_acc = map_utils.Map(self.map)
 					if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)): #outside map
 						self.particles[particle_index].weight *= 0.0 
-					elif map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y) == 1: #On Obstacles
+					elif map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y) > 0.9: #On Obstacles
 						self.particles[particle_index].weight *=  0.0
 						
 				#Normalise Weights
@@ -281,14 +288,15 @@ class ParticleFilterLocalization():
 			s = r.uniform(beta, beta+float(1.0/self.num_particles))
 			for j in range(self.num_particles):
 				if (j == 0 and s < prob_pos[j]) or (s > prob_pos[j-1] and s < prob_pos[j]):
-					if add_noise_every_step == 1 :
-						noise = ceil(r.gauss(0, 5 )*100.)/100. #0.1m std dev
+					if add_noise_every_step != 1 :
+						noise = ceil(r.gauss(0, 0.3)*100.)/100. #0.1m std dev
 						self.particles[j].x += noise 
-						noise = ceil(r.gauss(0, 5)*100.)/100. #0.1m std dev
+						noise = ceil(r.gauss(0, 0.3)*100.)/100. #0.1m std dev
 						self.particles[j].y += noise
-						noise = ceil(r.gauss(0, pi/90)*100.)/100. #0.2 degree std dev
+						noise = ceil(r.gauss(0, pi/120)*100.)/100. #0.2 degree std dev
 						self.particles[j].theta += noise 
-						self.particles[j].pose = get_pose(self.particles[j].x, self.particles[j].y, self.particles[j].theta)					
+						self.particles[j].pose = get_pose(self.particles[j].x, self.particles[j].y, self.particles[j].theta)	
+  
 					new_particle_set.append(deepcopy(self.particles[j]))
 					break
 			
