@@ -83,7 +83,13 @@ class ParticleFilterLocalization():
 		laser_sigma_hit = self.config['laser_sigma_hit']
 		self.num_particles = self.config['num_particles']
 
-		
+		self.first_move_sigma_x = self.config['first_move_sigma_x']
+		self.first_move_sigma_y = self.config['first_move_sigma_y']
+		self.first_move_sigma_angle = self.config['first_move_sigma_angle']
+		self.resample_sigma_x = self.config['resample_sigma_x']
+		self.resample_sigma_y = self.config['resample_sigma_y']
+		self.resample_sigma_angle = self.config['resample_sigma_angle']
+
 		self.likelihood_field = None
 		self.map = None
 
@@ -106,9 +112,7 @@ class ParticleFilterLocalization():
 		self.particle_pub_start.publish(self.pose_array)
 		rospy.sleep(1)	
 		
-		#TODO Remove "if"
-		if self.likelihood_field is None:
-			self.update_likelihood_field(self.map, laser_sigma_hit)
+		self.update_likelihood_field(self.map, laser_sigma_hit)
 		
 		self.likelihood_pub.publish(self.likelihood_field.to_message())
 		rospy.sleep(1)
@@ -118,28 +122,11 @@ class ParticleFilterLocalization():
 		self.move_list_size = len(self.motions)
 
 		self.first_move = 1		
-
 		while len(self.motions) > 0:
 			self.result_update_pub.publish(True)
 			motion = self.motions.popleft();
-
-			# Use the first move to synthesize partiles close to robot (add variations to motion model)
-			if self.first_move == 1:
-				if motion[0] != 0.0:
-					self.move(0.0, motion[0], 0.0, 1)
-				self.move(motion[1], 0.0, 5.0, 1)	
-			else:
-				if motion[0] != 0.0:
-					self.move(0.0, motion[0], 0.0, 0)
-				self.move(motion[1], 0.0, 10.0, 0)	
+			self.move(motion[0], motion[1], motion[2])
 			self.first_move = 0
-
-	
-		#rospy.spin()	
-	
-		#""" Waiting Until Shutdown """
-		#while not rospy.is_shutdown():
-		#	rospy.sleep(1)	
 
 		#Publish Shutdown
 		rospy.sleep(2)
@@ -154,59 +141,48 @@ class ParticleFilterLocalization():
 			self.particle_pub.publish(self.pose_array)
 			rospy.sleep(0.1)
 
-	def move(self, dist, angle, dist_per_move, add_noise_every_step):
+	def move(self, angle, move_step_dist, num_move_steps):
 
-		if angle != 0:
-			move_function(angle, dist)
+		for step in range(num_move_steps):
+
+			# Move Robot
+			move_function(angle, move_step_dist)
+
+			""" Update particles odom """
 			for particle_index in range(self.num_particles):
-				noise = 0
-				if add_noise_every_step == 1 :
-					noise =  np.random.randn()*0.05*2*pi
-				self.particles[particle_index].theta += (angle*pi/180) + noise
+				# Move Partice
+				self.particles[particle_index].x += move_step_dist*np.cos(self.particles[particle_index].theta)
+				self.particles[particle_index].y += move_step_dist*np.sin(self.particles[particle_index].theta)
+				self.particles[particle_index].theta += (angle*pi/180)
 				self.particles[particle_index].pose = get_pose(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
-	
-		else:
-			#Moving one pixel at a time to ensure particles don't cross obstacles (UNKNOWINGLY)
-			#dist_per_move = 1.0
-			while dist != 0:
-				dist = dist - dist_per_move
-				if (dist < 0):
-					dist_per_move = dist_per_move + dist
-					dist = 0
-				move_function(angle, dist_per_move)
-	
-				""" Update particles odom """
-				for particle_index in range(self.num_particles):
-					self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)
-					self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)
 
-					if add_noise_every_step == 1 :
-						self.particles[particle_index].x += dist_per_move*np.cos(self.particles[particle_index].theta)*np.random.randn()*0.4 
-						self.particles[particle_index].y += dist_per_move*np.sin(self.particles[particle_index].theta)*np.random.randn()*0.4
-						noise = ceil(r.gauss(0, pi*dist_per_move/200)*100.)/100. #0.2 degree std dev per metre
-						self.particles[particle_index].theta += noise 
+				# Add Noise
+				if self.first_move == 1 :
+					noise = ceil(r.gauss(0, self.first_move_sigma_x)*100.)/100. #2m std dev
+					self.particles[particle_index].x += noise 
+					noise = ceil(r.gauss(0, self.first_move_sigma_y)*100.)/100. #2m std dev
+					self.particles[particle_index].y += noise
+					noise = ceil(r.gauss(0, self.first_move_sigma_angle)*100.)/100. #4.5 degree std dev per metre
+					self.particles[particle_index].theta += noise 
 
-					self.particles[particle_index].pose = get_pose(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
-					map_acc = map_utils.Map(self.map)
-					if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)): #outside map
-						self.particles[particle_index].weight *= 0.0 
-					elif map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y) > 0.9: #On Obstacles
-						self.particles[particle_index].weight *=  0.0
-						
-				#Normalise Weights
-				total_weight = 0.0
-				for particle_index in range(self.num_particles):
-					total_weight += self.particles[particle_index].weight
-				for particle_index in range(self.num_particles):
-					self.particles[particle_index].weight /= total_weight
-	
-				# Publish the updated particles.
-				self.pose_array = self.create_pose_array_msg()
-				self.particles_resample(add_noise_every_step)
+				self.particles[particle_index].pose = get_pose(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
+				map_acc = map_utils.Map(self.map)
+				if np.isnan(map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y)): #outside map
+					self.particles[particle_index].weight *= 0.0 
+				elif map_acc.get_cell(self.particles[particle_index].x,self.particles[particle_index].y) > 0.9: #On Obstacles
+					self.particles[particle_index].weight *=  0.0
+					
+			#Normalise Weights
+			total_weight = 0.0
+			for particle_index in range(self.num_particles):
+				total_weight += self.particles[particle_index].weight
+			for particle_index in range(self.num_particles):
+				self.particles[particle_index].weight /= total_weight
+
+			# Publish the updated particles
+			self.pose_array = self.create_pose_array_msg()
+			self.particles_resample()
 			
-		self.pose_array = self.create_pose_array_msg()
-		self.particles_resample(0)
-
 	def init_Particles(self):
 		self.particles = []
 		for particle_count in range(self.num_particles):
@@ -262,7 +238,7 @@ class ParticleFilterLocalization():
 		self.likelihood_field.grid = probs.reshape(self.likelihood_field.grid.shape)
 		rospy.loginfo('Done building likelihood field')
 
-	def particles_resample(self, add_noise_every_step):
+	def particles_resample(self):
 		w = []
 		total_w = 0.0
 		for particle_index in range(self.num_particles):
@@ -287,15 +263,18 @@ class ParticleFilterLocalization():
 			s = r.uniform(beta, beta+float(1.0/self.num_particles))
 			for j in range(self.num_particles):
 				if (j == 0 and s < prob_pos[j]) or (s > prob_pos[j-1] and s < prob_pos[j]):
-					if add_noise_every_step != 1 :
-						noise = ceil(r.gauss(0, 0.3)*100.)/100. #0.1m std dev
+
+					# Add resample Noise
+					if self.first_move != 1 :
+						noise = ceil(r.gauss(0, self.resample_sigma_x)*100.)/100. #0.3m std dev
 						self.particles[j].x += noise 
-						noise = ceil(r.gauss(0, 0.3)*100.)/100. #0.1m std dev
+						noise = ceil(r.gauss(0, self.resample_sigma_y)*100.)/100. #0.3m std dev
 						self.particles[j].y += noise
-						noise = ceil(r.gauss(0, pi/120)*100.)/100. #0.2 degree std dev
+						noise = ceil(r.gauss(0, self.resample_sigma_angle)*100.)/100. #1.5 degree std dev
 						self.particles[j].theta += noise 
 						self.particles[j].pose = get_pose(self.particles[j].x, self.particles[j].y, self.particles[j].theta)	
-  
+ 
+  					# Add the particle into the new particle set
 					new_particle_set.append(deepcopy(self.particles[j]))
 					break
 			
