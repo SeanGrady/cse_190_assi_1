@@ -5,12 +5,12 @@ import numpy as np
 import random as r
 from math import *
 from copy import deepcopy
-from std_msgs.msg import Bool, String, Float32
+from std_msgs.msg import Bool
 from collections import deque
 from read_config import read_config
 
-from nav_msgs.msg import OccupancyGrid, MapMetaData
-from geometry_msgs.msg import Pose, PoseArray, PointStamped, Quaternion, Point, Twist
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import Pose, PoseArray
 from sensor_msgs.msg import LaserScan
 import tf
 
@@ -78,16 +78,15 @@ class ParticleFilterLocalization():
 		global laser_z_rand 
 		global laser_sigma_hit 
 		
-		#TODO Put in config
-		laser_z_hit = 0.80
-		laser_z_rand = 0.05
-		laser_sigma_hit = 2
+		laser_z_hit = self.config['laser_z_hit']
+		laser_z_rand = self.config['laser_z_rand']
+		laser_sigma_hit = self.config['laser_sigma_hit']
+		self.num_particles = self.config['num_particles']
+
 		
 		self.likelihood_field = None
 		self.map = None
 
-		#TODO Put in config (Comment as "Can Change")
-		self.num_particles = 800
 		rospy.Subscriber('map', OccupancyGrid, self.map_callback)
 		rospy.Subscriber('base_scan', LaserScan, self.scan_callback)
 		rospy.Subscriber('pc_pub_start', PoseArray, self.particle_pub_start_callback)
@@ -305,9 +304,9 @@ class ParticleFilterLocalization():
 			if (beta > 1):
 				beta = beta-1
 			if (beta < old_beta):
-		    		new_beta_start = 1
+				new_beta_start = 1
 			if (beta > old_beta and new_beta_start == 1):
-		    		beta = r.random();
+				beta = r.random();
 				old_beta = beta;
 				new_beta_start = 0
 				
