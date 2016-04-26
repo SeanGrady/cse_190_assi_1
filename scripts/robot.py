@@ -143,17 +143,21 @@ class ParticleFilterLocalization():
 
 	def move(self, angle, move_step_dist, num_move_steps):
 
+		# Turn Robot
+		move_function(angle, 0)
+		for particle_index in range(self.num_particles):
+			self.particles[particle_index].theta += (angle*pi/180)
+
 		for step in range(num_move_steps):
 
-			# Move Robot
-			move_function(angle, move_step_dist)
+			# Move forward Robot
+			move_function(0, move_step_dist)
 
 			""" Update particles odom """
 			for particle_index in range(self.num_particles):
 				# Move Partice
 				self.particles[particle_index].x += move_step_dist*np.cos(self.particles[particle_index].theta)
 				self.particles[particle_index].y += move_step_dist*np.sin(self.particles[particle_index].theta)
-				self.particles[particle_index].theta += (angle*pi/180)
 				self.particles[particle_index].pose = get_pose(self.particles[particle_index].x, self.particles[particle_index].y, self.particles[particle_index].theta)
 
 				# Add Noise
