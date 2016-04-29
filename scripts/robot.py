@@ -34,13 +34,14 @@ class Particle:
 	def sense(self, scan_msg, likelihood_field):
 		xs, ys = self.laser_range_end(scan_msg)
 		#total_prob = 0
-		total_prob = 1
+		total_prob = 1 # BIAS
 
-		for i in range(0, len(xs), 30):
+		for i in range(0, len(xs), 5):
 		    likelihood = likelihood_field.get_cell(xs[i], ys[i])
 		    if np.isnan(likelihood):
 		        likelihood = 0
 		    	pz=(laser_z_hit * likelihood + laser_z_rand)
+			#total_prob += pz
 			total_prob += pz*pz*pz
 			#total_prob *= pz
 		
@@ -56,10 +57,10 @@ class Particle:
 		xs = []
 		ys = []
 		
-		for i in range(len(ranges)):
+		for i in range(len(ranges)/4, 3*len(ranges)/4):
 			if ranges[i] == scan_msg.range_max:
 				continue
-				#print "Obstacle Seen"
+			#print "Obstacle Seen"
 			xs.append(self.x + ranges[i] * np.cos(self.theta + theta_beam[i]))
 			ys.append(self.y + ranges[i] * np.sin(self.theta + theta_beam[i]))
 		
