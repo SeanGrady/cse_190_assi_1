@@ -56,7 +56,7 @@ class MapServer():
             if roll < self.config["prob_move_correct"]:
                 self.make_move(move)
             else:
-                possible_moves = deepcopy(self.config['move_list'])
+                possible_moves = deepcopy(self.config['possible_moves'])
                 possible_moves.remove(move)
                 random_move = r.choice(possible_moves)
                 self.make_move(random_move)
