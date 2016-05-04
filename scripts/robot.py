@@ -165,6 +165,7 @@ class RobotController():
         Update the beliefs about the robot's position based on a temperature
         measurement.
         """
+
         temp_probs = deepcopy(self.probability_matrix)
         num_cols = len(temp_probs[0])
         num_rows = len(temp_probs)
