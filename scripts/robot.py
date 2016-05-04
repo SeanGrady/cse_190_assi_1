@@ -4,6 +4,7 @@ import rospy
 import random as r
 import math as m
 import numpy as np
+import utils
 from copy import deepcopy
 from cse_190_assi_1.srv import requestTexture, moveService, requestTemperature
 from read_config import read_config
@@ -31,7 +32,7 @@ class RobotController():
             self.send_move_command(move)
             self.update_from_move(move)
 
-            self.show()
+            utils.print_2d_array(self.probability_matrix)
             self.rate.sleep()
 
     def init_ros_things(self):
@@ -180,11 +181,6 @@ class RobotController():
         else:
             temp_probs = [[prob/total_prob for prob in row] for row in temp_probs]
         self.probability_matrix = temp_probs
-
-    def show(self):
-        p = self.probability_matrix
-        rows = ['[' + ','.join(map(lambda x: '{0:.5f}'.format(x),r)) + ']' for r in p]
-        print '[' + ',\n '.join(rows) + ']'
 
 if __name__ == '__main__':
     rc = RobotController()
