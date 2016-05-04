@@ -23,16 +23,18 @@ class RobotController():
     def simulate(self):
         while not rospy.is_shutdown() and len(self.motions) > 0:
             temp = self.get_temperature()
+            print "Fetched Temperature: ", temp
             self.update_from_temp(temp)
 
             text = self.get_texture()
+            print "Fetched Texture: ", text
             self.update_from_text(text)
 
             move = self.motions.pop()
             self.send_move_command(move)
             self.update_from_move(move)
 
-            utils.print_2d_array(self.probability_matrix)
+            utils.print_2d_floats(self.probability_matrix)
             self.rate.sleep()
 
     def init_ros_things(self):
