@@ -6,6 +6,8 @@ import math as m
 import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData, moveService
+from cse_190_assi_1.msg import Move
+from std_msgs.msg import Bool
 from read_config import read_config
 
 
@@ -19,14 +21,19 @@ class MapServer():
                 requestMapData,
                 self.handle_data_request
         )
-        self.move_service = rospy.Service(
-                "moveService",
-                moveService,
-                self.handle_move_request
+        self.timer_sub = rospy.Subscriber(
+                "/sim/timer",
+                Bool,
+                self.handle_time_tick
+        )
+        self.move_publisher = rospy.Publisher(
+                "/map_server/move",
+                Move,
+                queue_size = 10
         )
         self.pos = self.initialize_position()
-        r.seed(self.config['seed'])
         print "starting pos: ", self.pos
+        self.motions = self.config['move_list'][::-1]
         rospy.spin()
 
     def initialize_position(self):
@@ -43,14 +50,25 @@ class MapServer():
             tex = self.config['texture_map'][self.pos[0]][self.pos[1]]
             return tex
 
-    def handle_move_request(self, request):
+    def handle_time_tick(self, message):
+        if not self.motions:
+            print "out of moves, shutting down"
+            rospy.signal_shutdown("sim complete")
+        move = self.motions.pop()
+        self.move_publisher.publish(move)
+
+    def publish_move(self, move):
+        move_msg = Move()
+        move_msg.move = move
+        self.move_publisher.publish(move_msg)
+
+    def handle_move(self, move):
         """Service that moves the robot according to a move request.
 
         self.config['uncertain_motion'] determines the motion model
         used: either certain motion or motion with a set probability
         (randomotherwise).
         """
-        move = list(request.move)
         if self.config['uncertain_motion']:
             roll = r.uniform(0,1)
             if roll < self.config["prob_move_correct"]:
@@ -60,9 +78,10 @@ class MapServer():
                 possible_moves.remove(move)
                 random_move = r.choice(possible_moves)
                 self.make_move(random_move)
+                self.publish_move(random_move)
         elif not self.config['uncertain_motion']:
             self.make_move(move)
-        return []
+            self.publish_move(move)
 
     def make_move(self, move):
         """Changes the robot's position"""

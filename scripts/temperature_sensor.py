@@ -5,8 +5,9 @@ import random
 import math as m
 import numpy as np
 from copy import deepcopy
-from cse_190_assi_1.srv import requestMapData, requestTemperature
-from std_msgs.msg import Bool
+from cse_190_assi_1.srv import requestMapData
+from cse_190_assi_1.msg import Move
+from std_msgs.msg import Bool, Float32
 from read_config import read_config
 
 
@@ -15,14 +16,19 @@ class TempSensor():
         """Read config file and setup ROS things"""
         self.config = read_config()
         rospy.init_node("temperature_sensor")
+        self.map_sub = rospy.Subscriber(
+                "/map_server/move",
+                Move,
+                self.handle_incoming_move
+        )
         self.temperature_requester = rospy.ServiceProxy(
                 "requestMapData",
                 requestMapData
         )
-        self.temperature_service = rospy.Service(
-                "requestTemperature",
-                requestTemperature,
-                self.handle_temperature_request
+        self.temperature_publisher = rospy.Publisher(
+                "/temp_sensor/data",
+                Float32,
+                queue_size = 10
         )
         self.temp_dict = {
                 'H': 40.0,
@@ -31,10 +37,10 @@ class TempSensor():
         }
         rospy.spin()
 
-    def handle_temperature_request(self, request):
-        temperature = self.take_measurement()
-        noisy_temp = self.add_noise(temperature)
-        return noisy_temp
+    def handle_incoming_move(self, message):
+        temp = self.take_measurement()
+        noisy_temp = self.add_noise(temp)
+        self.temperature_publisher.publish(noisy_temp)
 
     def take_measurement(self):
         """Get the temperature of the current square."""

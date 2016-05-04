@@ -6,6 +6,8 @@ import math as m
 import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData, requestTexture 
+from cse_190_assi_1.msg import Move
+from std_msgs.msg import Bool, String
 from read_config import read_config
 
 
@@ -14,22 +16,27 @@ class TexSensor():
         """Read config file and setup ROS things"""
         self.config = read_config()
         rospy.init_node("texture_sensor")
+        self.map_sub = rospy.Subscriber(
+                "/map_server/move",
+                Move,
+                self.handle_incoming_move
+        )
         self.texture_requester = rospy.ServiceProxy(
                 "requestMapData",
                 requestMapData
         )
-        self.texture_service = rospy.Service(
-                "requestTexture",
-                requestTexture,
-                self.handle_texture_request
+        self.texture_publisher = rospy.Publisher(
+                "/text_sensor/data",
+                String,
+                queue_size = 10
         )
         rospy.spin()
 
-    def handle_texture_request(self, request):
+    def handle_incoming_move(self, message):
         """Callback function for the texture service."""
         texture = self.take_measurement()
         noisy_texture = self.add_noise(texture)
-        return noisy_texture
+        self.texture_publisher.publish(noisy_texture)
 
     def take_measurement(self):
         """Get the texture of the current square."""

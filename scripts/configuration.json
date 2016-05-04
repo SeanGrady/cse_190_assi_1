@@ -24,5 +24,6 @@
     "prob_tex_correct": 0.99,
     "uncertain_motion": true,
     "prob_move_correct": 0.75,
-    "seed": 0
+    "seed": 0,
+    "rate": 0.5
 }
