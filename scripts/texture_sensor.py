@@ -23,8 +23,6 @@ class TexSensor():
                 requestTexture,
                 self.handle_texture_request
         )
-        r.seed(self.config['seed'])
-        rospy.sleep(1)
         rospy.spin()
 
     def handle_texture_request(self, request):

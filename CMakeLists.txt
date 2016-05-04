@@ -49,8 +49,6 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   temperatureMessage.msg
-   RobotProbabilities.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -59,6 +57,7 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
    moveService.srv
    requestMapData.srv
    requestTexture.srv
+   requestTemperature.srv
  )
 
 ## Generate actions in the 'action' folder

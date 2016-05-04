@@ -13,7 +13,6 @@ class MapServer():
     def __init__(self):
         """Read config file and setup ROS things"""
         self.config = read_config()
-        self.config["prob_move_correct"] = .75
         rospy.init_node("map_server")
         self.map_data_service = rospy.Service(
                 "requestMapData",
