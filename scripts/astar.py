@@ -11,6 +11,8 @@ class AStarSearch:
 
         self.validate_start_and_goal()
 
+        self.move_list = self.config["move_list"]
+
         self.closedset = set()
         self.openset = set()
 
@@ -76,22 +78,15 @@ class AStarSearch:
         """ Based on the allowed position, calculate the neighboring positions """
 
         neighbours = set()
-
         pos_x, pos_y = current_pos
 
-        north = (pos_x, pos_y - 1)
-        south = (pos_x, pos_y + 1)
-        east = (pos_x + 1, pos_y)
-        west = (pos_x - 1, pos_y)
+        for move in self.move_list:
+            move_x, move_y = move
 
-        if self.map[north] != 0:
-            neighbours.add(north)
-        if self.map[south] != 0:
-            neighbours.add(south)
-        if self.map[east] != 0:
-            neighbours.add(east)
-        if self.map[west] != 0:
-            neighbours.add(west)
+            new_pos = (pos_x + move_x, pos_y + move_y)
+
+            if self.map[new_pos] != 0:
+                neighbours.add(new_pos)
 
         return neighbours
 
