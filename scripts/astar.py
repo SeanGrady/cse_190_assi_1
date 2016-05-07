@@ -101,7 +101,7 @@ class AStarSearch:
         """ Start searching based on the given map, start and goal using A-star search """
 
         while len(self.openset) > 0:
-            print len(self.openset)
+            #print len(self.openset)
             #sort to get the lowest f_score for the ones in openset
             f_score_sorted = sorted(self.f_score, key = lambda position : self.g_score[position] + self.heuristic_cost_estimate(position, self.goal))
 
