@@ -3,10 +3,32 @@
   "goal": [145, 145],
 
   "move_list": [
-    [0,1],
+    [0, 1],
     [0, -1],
     [1, 0],
     [-1, 0]
   ],
-  "path_to_world_map": "world.png"
+  "path_to_world_map": "world.png",
+
+  "reward_for_each_step": -0.04,
+  "reward_for_hitting_wall": 0,
+  "reward_for_reaching_goal": 1.0,
+  "reward_for_falling_in_pit": -1.0,
+
+  "discount_factor": 1.0,
+
+  "prob_move_forward": 0.8,
+  "prob_move_backward": 0.1,
+  "prob_move_left": 0.1,
+  "prob_move_right": 0.0,
+
+  "mdp_grid_size": [3, 4],
+  "mdp_start": [0, 0],
+  "mdp_goal": [0, 3],
+  "mdp_walls": [
+    [1, 1]
+  ],
+  "mdp_pits": [
+    [1, 3]
+  ]
 }
