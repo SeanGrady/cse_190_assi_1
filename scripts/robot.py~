@@ -1,0 +1,216 @@
+#!/usr/bin/env python
+
+import rospy
+import random
+import math
+import numpy as np
+from read_config import read_config
+from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import String, Float32, Bool
+from geometry_msgs.msg import Pose, PoseArray
+from map_utils import Map
+from helper_functions import get_pose, move_function
+from sklearn.neighbors import KDTree
+from sensor_msgs.msg import LaserScan
+
+class Particle():
+    def __init__(self, _x, _y, _theta):
+        self.x = _x
+        self.y = _y
+        self.theta = _theta
+
+class Robot():
+
+   def __init__(self):
+        """Read config file and setup ROS things"""
+        self.config = read_config()
+        rospy.init_node("robot")
+
+        self.map_service = rospy.Subscriber(
+                "/map",
+                OccupancyGrid,
+                self.map_service_callback
+        )
+        self.base_scan_service = rospy.Subscriber(
+                "/base_scan",
+                LaserScan,
+                self.scan_service_callback
+        )
+        # result publisher
+        self.particle_publisher = rospy.Publisher(
+                "/particlecloud",
+                PoseArray,
+                queue_size = 10
+        )
+        self.likelihood_publisher = rospy.Publisher(
+                "/likelihood_field",
+                OccupancyGrid,
+                queue_size = 10,
+                latch = True
+        )
+        # get the constants
+        move_list = self.config['move_list']
+        first_move_sigma_x = self.config['first_move_sigma_x']
+        first_move_sigma_y = self.config['first_move_sigma_y']
+        first_move_sigma_angle = self.config['first_move_sigma_angle']
+        resample_sigma_x = self.config['resample_sigma_x']
+        resample_sigma_y = self.config['resample_sigma_y']
+        resample_sigma_angle = self.config['resample_sigma_angle']
+        self.laser_z_hit = self.config['laser_z_hit']
+        self.laser_z_rand = self.config['laser_z_rand']
+        self.laser_sigma_hit = self.config['laser_sigma_hit']
+        self.num_particles = self.config['num_particles']
+        # initialize some variables
+        move_count = 1
+        self.map_setup = 0
+        rospy.sleep(1)
+        rospy.spin()
+
+        if self.map_setup == 1:
+            # move the robot first time
+            a = move_list[0][0]
+            d = move_list[0][1]
+            n = move_list[0][2]
+            move_function(a, 0)
+            for i in range(0, n):
+                move_function(0, d)
+
+            # motion model for particle filter
+            for i in range(0, self.num_particles):
+                # decompose motion command to get dx and dy
+                dx = n * d * math.cos(math.radians(a + self.particles[i].theta))
+                dy = n * d * math.sin(math.radians(a + self.particles[i].theta))
+                self.particles[i].x += dx + np.random.normal(0, first_move_sigma_x, 1)[0]
+                self.particles[i].y += dy + np.random.normal(0, first_move_sigma_y, 1)[0]
+                self.particles[i].theta += a + np.random.normal(0, first_move_sigma_angle, 1)[0]
+
+            # scan and move
+            while move_count <= len(move_list):
+                weights_sum = 0.0
+                for i in range(0, len(self.particles)):
+                    cur_angle = self.laserScan.angle_min + self.particles[i].theta
+                    # for each particle, calculate its p total and weight
+                    p_tot = 0.0
+                    for j in range(0, len(self.laserScan.ranges)):
+                        dx = self.laserScan.ranges[j] * math.cos(cur_angle)
+                        dy = self.laserScan.ranges[j] * math.sin(cur_angle)
+                        x = self.particles[i].x + dx
+                        y = self.particles[i].y + dy
+                        lp = self.likelihoods.get_cell(x, y)
+                        p_z = self.laser_z_hit * lp + self.laser_z_rand
+                        p_tot += p_z
+                        cur_angle += self.laserScan.angle_increment
+                    self.weights[i] *= p_tot
+                    weights_sum += self.weights[i]
+
+                # normalize the weights
+                for i in range(0, len(self.particles)):
+                    self.weights[i] /= weights_sum
+
+                # resample particles
+                resample_index = []
+                pointer = 1.0 / self.num_particles
+                cur_weight = 0
+                for i in range(0, len(self.particles)):
+                    cur_weight += self.weights[i]
+                    while pointer <= cur_weight:
+                        resample_index.append(i)
+                        pointer += 1.0 / self.num_particles
+
+                new_particles = []
+                
+                for i in range(0, self.num_particles):
+                    idx = resample_index[i]
+                    new_x = self.particles[idx].x + np.random.normal(0, resample_sigma_x, 1)[0]
+                    new_y = self.particles[idx].y + np.random.normal(0, resample_sigma_y, 1)[0]
+                    new_theta = particles[idx].theta + np.random.normal(0, resample_sigma_angle, 1)[0]
+                    new_particles.append(Particle(new_x, new_y, new_theta))
+                    poses[i] = get_pose(new_x, new_y, new_theta)
+
+                self.particles = new_particles
+
+                # publish the particles after rasampling
+                poseArray = PoseArray()
+                poseArray.poses = poses
+                self.particle_publisher.publish(poseArray)
+
+                # check whether there's any more available move
+                if move_count == len(move_list):
+                    rospy.signal_shutdown("No more move")
+
+                # move the robot
+                a = move_list[move_count][0]
+                d = move_list[move_count][1]
+                n = move_list[move_count][2]
+                move_function(a, 0)
+                for i in range(0, n):
+                    move_function(0, d)
+
+                # motion model for particle filter
+                for i in range(0, self.num_particles):
+                    # decompose motion command to get dx and dy
+                    dx = n * d * math.cos(math.radians(a + self.particles[i].theta))
+                    dy = n * d * math.sin(math.radians(a + self.particles[i].theta))
+                    self.particles[i].x += dx
+                    self.particles[i].y += dy
+                    self.particles[i].theta += a
+
+                move_count += 1
+
+    def map_service_callback(self, occupancyGrid):
+        """Callback function for the map service subscriber.
+        """
+        map_data = Map(occupancyGrid)
+        self.likelihoods = Map(occupancyGrid)
+
+        width = map_data.width
+        height = map_data.height
+        self.weights = []
+        self.particles = []
+        poses = []
+
+        # get n random particles
+        random_numbers = np.random.random((self.num_particles, 3))
+        for i in range(0, self.num_particles):
+            cur_particle = Particle(random_numbers[i][0] * width, random_numbers[i][1] * height, random_numbers[i][2] * 360)
+            self.particles.append(cur_particle)
+            poses.append(get_pose(cur_particle.x, cur_particle.y, cur_particle.theta))
+            self.weights.append(1.0 / self.num_particles)
+
+        # publish initial particles
+        poseArray = PoseArray()
+        poseArray.poses = poses
+        self.particle_publisher.publish(poseArray)
+
+        # Construct the Likelihood Field
+        obstacles = []
+        for i in range(0, height):
+            for j in range(0, width):
+                if map_data.grid[i][j] == 1:
+                    obstacles.append([i, j])
+
+        kdtree = KDTree(obstacles)
+
+        for i in range(0, height):
+            for j in range(0, width):
+                dist, ind = kdtree.query([i, j], k = 1)
+                min_dist_square = dist[0] * dist[0]
+                val = self.laser_z_hit * self.gaussian(min_dist_square, 0, self.laser_sigma_hit) + self.laser_z_rand
+                self.likelihoods.set_cell(i, j, val)
+
+        # publish the likelihood
+        self.likelihood_publisher.publish(self.likelihoods.to_message())
+
+        self.map_setup = 1
+
+    def scan_service_callback(self, _laserScan):
+        self.laserScan = _laserScan
+
+    def gaussian(self, x, mu, sigma):
+        a = 1 / (math.sqrt(2 * math.pi) * sigma)
+        return a * math.exp(-(x-mu)*(x-mu) / (2*sigma*sigma))
+
+
+
+if __name__ == '__main__':
+    rs = Robot()

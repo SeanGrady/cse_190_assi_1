@@ -1,30 +1,39 @@
 #Laser Ranger Properties 
 define topurg ranger
 (
-	sensor( 			
-    range [ 0.0  100.0 ]
+  #Laser Sensor 
+  #range => min & max ranger of a laser scan
+  #fov => angle of laser spread
+  #samples => number of laser scans
+
+  sensor(       
+    range [ 0.0  200.0 ]
     fov 360
-   samples 1000
+    samples 100 
   )
+
   color "black"
-  size [ 0.050 0.050 0.100 ]
+  size [ 0.05 0.05 0.1 ]
 )
 
 #Robot Properties
 define robot position
 (
   #DONT CHANGE SIZE, lot of random issues pop up if you try to increase it
-  size [0.350 0.350 0.250]
-  origin [0.000 0.000 0.000 0.000]
+  size [0.35 0.35 0.25]
+  origin [0 0 0 0]
   gui_nose 1
+  #Differential Turn
   drive "diff"
-  velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]					
+  #Min-Max velocities for x,y,z,theta
+  velocity_bounds [-40 40 -1 1 -1 1 -360 360 ]          
   acceleration_bounds [-1 1 -1 1 -1 1 -360 360]
-  topurg(pose [ 0.000 0.000 0.000 0.000 ])
+  #Laser sensor placed on the robot
+  topurg(pose [ 0.000 0.000 0 0.000 ])
 )
 
-# throw in a robot
-robot( pose [ 229.400 99.800 0.000 -180.000 ] name "robot" color "red")
+# throw in a robot in the map
+robot( pose [ 225.0 15.0 0.0 0.0 ] name "robot" color "red")
 
 #FloorPlan Properties
 define floorplan model
@@ -51,9 +60,9 @@ interval_sim 100  # simulation timestep in milliseconds
 #Window Properties
 window
 ( 
-  size [ 612 484 ] 
+  size [ 612.000 484.000 ] 
 
-  rotate [ 0.000 0.000 ]
+  rotate [ 0.000 0.0 ]
   scale 2.358 
 )
 
@@ -62,6 +71,6 @@ floorplan
 ( 
   name "tutorial"
   bitmap "MAP.png"
-  size [259.000 194.000 0.000]
-  pose [ 129.500 97.000 0.000 0.000 ]
+  size [259.0 194.0 0.5]
+  pose [ 129.5 97.0 0.0 0.0 ]
 )

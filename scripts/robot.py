@@ -33,20 +33,26 @@ class Particle:
 
 	def sense(self, scan_msg, likelihood_field):
 		xs, ys = self.laser_range_end(scan_msg)
-		#total_prob = 0
-		total_prob = 1 # BIAS
+		total_prob = 0
+		#total_prob = 1 
+		#bias = 0.25
+		#bias = 0.5
+		bias = 0.0
 
-		for i in range(0, len(xs), 5):
+		for i in range(0, len(xs), 10):
 		    likelihood = likelihood_field.get_cell(xs[i], ys[i])
 		    if np.isnan(likelihood):
 		        likelihood = 0
 		    	pz=(laser_z_hit * likelihood + laser_z_rand)
-			#total_prob += pz
-			total_prob += pz*pz*pz
 			#total_prob *= pz
+			#total_prob += pz
+			#total_prob += pz*pz
+			total_prob += pz*pz*pz
+			#total_prob = 1/(1+np.exp(-pz*pz))
 		
-			if len(xs)>0:
-				self.weight *= total_prob
+		if len(xs)>0:
+			#self.weight *= (total_prob+bias)
+			self.weight *= 1/(1+np.exp(-total_prob))
 		return self.weight
 
 	def laser_range_end(self, scan_msg):
@@ -57,7 +63,8 @@ class Particle:
 		xs = []
 		ys = []
 		
-		for i in range(len(ranges)/4, 3*len(ranges)/4):
+		#for i in range(5*len(ranges)/8, 7*len(ranges)/8):
+		for i in range(len(ranges)):
 			if ranges[i] == scan_msg.range_max:
 				continue
 			#print "Obstacle Seen"
@@ -246,8 +253,39 @@ class ParticleFilterLocalization():
 	def particles_resample(self):
 		w = []
 		total_w = 0.0
+
+
+		#AVERAGING Begins
+		laser_scan_info_avg = []
+		for i in range(len(self.laser_scan_info.ranges)):
+			laser_scan_info_avg.append(self.laser_scan_info.ranges[i])
+
+		for count in range(9):
+			rospy.sleep(0.1)
+			for i in range(len(self.laser_scan_info.ranges)):
+				laser_scan_info_avg[i] += self.laser_scan_info.ranges[i]
+
+		for i in range(len(self.laser_scan_info.ranges)):
+			laser_scan_info_avg[i] /= 10
+
+		self.avg_scan = LaserScan()
+		self.avg_scan.header = self.laser_scan_info.header
+		self.avg_scan.angle_min = self.laser_scan_info.angle_min
+		self.avg_scan.angle_max = self.laser_scan_info.angle_max
+		self.avg_scan.angle_increment = self.laser_scan_info.angle_increment
+		self.avg_scan.time_increment = self.laser_scan_info.time_increment
+		self.avg_scan.scan_time = self.laser_scan_info.scan_time
+		self.avg_scan.range_min = self.laser_scan_info.range_min
+		self.avg_scan.range_max = self.laser_scan_info.range_max
+		self.avg_scan.intensities = self.laser_scan_info.intensities
+		for i in range(len(self.laser_scan_info.ranges)):
+			self.avg_scan.ranges.append(self.laser_scan_info.ranges[i])
+		#AVERAGING Ends
+
+
 		for particle_index in range(self.num_particles):
-			w.append(self.particles[particle_index].sense(self.laser_scan_info, self.likelihood_field))
+			#w.append(self.particles[particle_index].sense(self.laser_scan_info, self.likelihood_field))
+			w.append(self.particles[particle_index].sense(self.avg_scan, self.likelihood_field))
 			total_w += w[particle_index]
 		
 		prob_pos = []
@@ -270,6 +308,14 @@ class ParticleFilterLocalization():
 				if (j == 0 and s < prob_pos[j]) or (s > prob_pos[j-1] and s < prob_pos[j]):
 
 					# Add resample Noise
+					if self.first_move == 1 :
+						noise = ceil(r.gauss(0, self.first_move_sigma_x)*100.)/100. #2m std dev
+						self.particles[j].x += noise 
+						noise = ceil(r.gauss(0, self.first_move_sigma_y)*100.)/100. #2m std dev
+						self.particles[j].y += noise
+						noise = ceil(r.gauss(0, self.first_move_sigma_angle)*100.)/100. #4.5 degree std dev per metre
+						self.particles[j].theta += noise 
+						self.particles[j].pose = get_pose(self.particles[j].x, self.particles[j].y, self.particles[j].theta)	
 					if self.first_move != 1 :
 						noise = ceil(r.gauss(0, self.resample_sigma_x)*100.)/100. #0.3m std dev
 						self.particles[j].x += noise 
