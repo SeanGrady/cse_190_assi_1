@@ -106,9 +106,10 @@ class MarkovDecisionProcessWithEM:
             new_position_x = current_position_x
             new_position_y = min(len(self.map[0]) - 1, current_position_y + 1)
 
+        """
         if self.map[new_position_x][new_position_y] == 1:
             return current_position
-
+        """
         return [new_position_x, new_position_y]
 
 
@@ -237,7 +238,7 @@ class MarkovDecisionProcessWithEM:
                 #print "Converged in", no_of_iter, "iterations"
                 break
             if no_of_iter >= max_iter:
-                #does not converge
+                #print "Did not converge"
                 break
         #self.print_2d_array(self.utility_path)
         return self.utility_path
