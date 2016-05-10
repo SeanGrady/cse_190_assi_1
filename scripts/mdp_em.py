@@ -233,14 +233,13 @@ class MarkovDecisionProcessWithEM:
                     new_utility_path[row][col] = value
 
             self.utility_path = new_utility_path
-
             if max_norm <= val_epsilon * (1 - self.discount_factor) / self.discount_factor:
-                print "Converged in", no_of_iter, "iterations"
+                #print "Converged in", no_of_iter, "iterations"
                 break
             if no_of_iter >= max_iter:
                 #does not converge
                 break
-        self.print_2d_array(self.utility_path)
+        #self.print_2d_array(self.utility_path)
         return self.utility_path
 
     def get_utility_for_action(self, position, action = None):
@@ -289,6 +288,10 @@ class MarkovDecisionProcessWithEM:
                 if [row, col] == self.mdp_goal:
                     row_list.append("EXIT")
                     sys.stdout.write(u"\u2605" + "\t")
+
+                elif [row, col] in self.mdp_walls:
+                    row_list.append("WALL")
+                    sys.stdout.write(u"\u25a2" + "\t")
                 else:
                     if action == self.ACTION_NORTH:
                         sys.stdout.write(u"\u25b2" + "\t")
@@ -303,9 +306,25 @@ class MarkovDecisionProcessWithEM:
                     row_list.append(action)
             final_action_list.append(row_list)
             sys.stdout.write("\n")
-        self.print_2d_array(final_action_list)
+        #self.print_2d_array(final_action_list)
+
+    def print_map(self):
+        for row in range(len(self.map)):
+            for col in range(len(self.map[0])):
+                if [row, col] == self.mdp_goal:
+                    sys.stdout.write(u"\u2605" + "\t")
+                elif [row, col] in self.mdp_walls:
+                    sys.stdout.write(u"\u25a2" + "\t")
+                elif [row, col] in self.mdp_pits:
+                    sys.stdout.write(u"\u00d7" + "\t")
+                else:
+                    sys.stdout.write(u"\u003f" + "\t")
+            sys.stdout.write("\n")
+
 
 
 em_instance = MarkovDecisionProcessWithEM()
+em_instance.print_map()
+print "-" * 50
 em_instance.value_iteration()
 em_instance.get_action_from_utility_path()
