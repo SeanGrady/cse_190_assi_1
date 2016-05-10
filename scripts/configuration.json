@@ -10,7 +10,7 @@
   ],
   "path_to_world_map": "world.png",
 
-  "reward_for_each_step": -0.04,
+  "reward_for_each_step": -0.00,
   "reward_for_hitting_wall": -0.05,
   "reward_for_reaching_goal": 1.0,
   "reward_for_falling_in_pit": -1.0,
