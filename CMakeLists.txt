@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(cse_190_assi_1)
+project(cse_190_assi_3)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -47,19 +47,16 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
- add_message_files(
-   FILES
-   temperatureMessage.msg
-   RobotProbabilities.msg
- )
+add_message_files(
+  FILES
+  AStarPath.msg
+  PolicyList.msg
+)
 
 ## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   moveService.srv
-   requestMapData.srv
-   requestTexture.srv
- )
+# add_service_files(
+#   FILES
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -69,10 +66,10 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs
- )
+generate_messages(
+	DEPENDENCIES
+	std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,9 +102,9 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES cse_190_assi_1
+#  LIBRARIES cse_190_assi_2
 #  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
+#  DEPENDS 
 )
 
 ###########
@@ -122,21 +119,21 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(cse_190_assi_1
-#   src/${PROJECT_NAME}/cse_190_assi_1.cpp
+# add_library(cse_190_assi_2
+#   src/${PROJECT_NAME}/cse_190_assi_2.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(cse_190_assi_1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(cse_190_assi_2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 #add_executable(robot src/robot.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(cse_190_assi_1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(cse_190_assi_2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(robot
@@ -158,7 +155,7 @@ include_directories(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS cse_190_assi_1 cse_190_assi_1_node
+# install(TARGETS cse_190_assi_2 cse_190_assi_2_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -183,7 +180,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_cse_190_assi_1.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_cse_190_assi_2.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
