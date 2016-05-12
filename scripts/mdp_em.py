@@ -1,9 +1,7 @@
 from read_config import read_config
 import numpy
 import sys
-import matplotlib as mpl
-mpl.use('TkAgg')
-import matplotlib.pyplot as plt
+import image_util
 
 class MarkovDecisionProcessWithEM:
     ACTION_NORTH = 'N'
@@ -21,7 +19,7 @@ class MarkovDecisionProcessWithEM:
     def init_config(self):
         self.config = read_config()
 
-        self.grid_size = self.config["mdp_grid_size"]
+        self.grid_size = self.config["map_size"]
 
         self.rew_step = self.config["reward_for_each_step"]
         self.rew_wall = self.config["reward_for_hitting_wall"]
@@ -35,9 +33,9 @@ class MarkovDecisionProcessWithEM:
         self.prob_left = self.config["prob_move_left"]
         self.prob_right = self.config["prob_move_right"]
 
-        self.mdp_goal = self.config["mdp_goal"]
-        self.mdp_walls = self.config["mdp_walls"]
-        self.mdp_pits = self.config["mdp_pits"]
+        self.mdp_goal = self.config["goal"]
+        self.mdp_walls = self.config["walls"]
+        self.mdp_pits = self.config["pits"]
 
 
     def init_map(self):
@@ -215,13 +213,14 @@ class MarkovDecisionProcessWithEM:
         """
         Given the set of positions and goals and rewards, we find the optimal utility path for the grid.
         """
+        self.image_list = []
         self.utility_path = self.create_utility_path()
         val_epsilon = 0.1
         max_iter = 1000
-        no_of_iter = 0
+        self.no_of_iter = 0
 
         while (True):
-            no_of_iter += 1
+            self.no_of_iter += 1
 
             max_norm = 0
             new_utility_path = self.create_utility_path()
@@ -234,10 +233,12 @@ class MarkovDecisionProcessWithEM:
                     new_utility_path[row][col] = value
 
             self.utility_path = new_utility_path
+            self.generate_image_for_current_utility_path()
+
             if max_norm <= val_epsilon * (1 - self.discount_factor) / self.discount_factor:
                 #print "Converged in", no_of_iter, "iterations"
                 break
-            if no_of_iter >= max_iter:
+            if self.no_of_iter >= max_iter:
                 #print "Did not converge"
                 break
         #self.print_2d_array(self.utility_path)
@@ -287,13 +288,17 @@ class MarkovDecisionProcessWithEM:
             for col in range(len(self.map[0])):
                 action = self.get_action_based_on_utility_values([row, col])
                 if [row, col] == self.mdp_goal:
-                    row_list.append("EXIT")
-                    sys.stdout.write(u"\u2605" + "\t")
+                    row_list.append("GOAL")
+                    #sys.stdout.write(u"\u2605" + "\t")
 
                 elif [row, col] in self.mdp_walls:
                     row_list.append("WALL")
-                    sys.stdout.write(u"\u25a2" + "\t")
+                    #sys.stdout.write(u"\u25a2" + "\t")
+                elif [row, col] in self.mdp_pits:
+                    row_list.append("PIT")
+                    #sys.stdout.write(u"\u00d7" + "\t")
                 else:
+                    """
                     if action == self.ACTION_NORTH:
                         sys.stdout.write(u"\u25b2" + "\t")
                     elif action == self.ACTION_SOUTH:
@@ -302,12 +307,12 @@ class MarkovDecisionProcessWithEM:
                         sys.stdout.write(u"\u25c0" + "\t")
                     elif action == self.ACTION_EAST:
                         sys.stdout.write(u"\u25b6" + "\t")
-                    else:
-                        sys.stdout.write(u"\u00d7" + "\t")
+                    """
                     row_list.append(action)
             final_action_list.append(row_list)
-            sys.stdout.write("\n")
+            #sys.stdout.write("\n")
         #self.print_2d_array(final_action_list)
+        return final_action_list
 
     def print_map(self):
         for row in range(len(self.map)):
@@ -322,10 +327,12 @@ class MarkovDecisionProcessWithEM:
                     sys.stdout.write(u"\u003f" + "\t")
             sys.stdout.write("\n")
 
+    def generate_image_for_current_utility_path(self):
+        image_util.save_image_for_iteration(self.get_action_from_utility_path(), self.no_of_iter)
 
 
 em_instance = MarkovDecisionProcessWithEM()
-em_instance.print_map()
-print "-" * 50
+#em_instance.print_map()
+#print "-" * 50
 em_instance.value_iteration()
-em_instance.get_action_from_utility_path()
+image_util.generate_video(em_instance.no_of_iter)
