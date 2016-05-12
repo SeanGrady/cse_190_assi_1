@@ -78,12 +78,12 @@ class AStarSearch:
             path_from_prev_pos = self.retrace_path(self.prev_position[current_pos])
             return_path = []
             return_path.extend(path_from_prev_pos)
-            return_path.append(current_pos)
+            return_path.append([current_pos[0], current_pos[1]])
             return return_path
 
         except KeyError, e:
             # we have reached the start node
-            return [current_pos]
+            return [[current_pos[0], current_pos[1]]]
 
     def get_neighbour_positions(self, current_pos):
         """ Based on the allowed position, calculate the neighboring positions """
@@ -145,7 +145,7 @@ class AStarSearch:
                         if neighbour_pos not in self.openset:
                             self.openset.add(neighbour_pos)
 
-a_star_instance = AStarSearch()
-a_star_search_path = a_star_instance.a_start_search()
-print "Reached Goal in", len(a_star_search_path), "steps"
-print a_star_search_path
+#a_star_instance = AStarSearch()
+#a_star_search_path = a_star_instance.a_start_search()
+#print "Reached Goal in", len(a_star_search_path), "steps"
+#print a_star_search_path

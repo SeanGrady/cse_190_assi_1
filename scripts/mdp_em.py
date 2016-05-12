@@ -214,6 +214,7 @@ class MarkovDecisionProcessWithEM:
         Given the set of positions and goals and rewards, we find the optimal utility path for the grid.
         """
         self.image_list = []
+        result_path_list = []
         self.utility_path = self.create_utility_path()
         val_epsilon = 0.1
         max_iter = 1000
@@ -233,7 +234,8 @@ class MarkovDecisionProcessWithEM:
                     new_utility_path[row][col] = value
 
             self.utility_path = new_utility_path
-            self.generate_image_for_current_utility_path()
+            
+            result_path_list.append(self.get_action_from_utility_path())
 
             if max_norm <= val_epsilon * (1 - self.discount_factor) / self.discount_factor:
                 #print "Converged in", no_of_iter, "iterations"
@@ -242,7 +244,7 @@ class MarkovDecisionProcessWithEM:
                 #print "Did not converge"
                 break
         #self.print_2d_array(self.utility_path)
-        return self.utility_path
+        return result_path_list
 
     def get_utility_for_action(self, position, action = None):
         """
@@ -330,9 +332,8 @@ class MarkovDecisionProcessWithEM:
     def generate_image_for_current_utility_path(self):
         image_util.save_image_for_iteration(self.get_action_from_utility_path(), self.no_of_iter)
 
-
-em_instance = MarkovDecisionProcessWithEM()
+#em_instance = MarkovDecisionProcessWithEM()
 #em_instance.print_map()
 #print "-" * 50
-em_instance.value_iteration()
-image_util.generate_video(em_instance.no_of_iter)
+#em_instance.value_iteration()
+#image_util.generate_video(em_instance.no_of_iter)
