@@ -161,19 +161,20 @@ class MarkovDecisionProcessWithEM:
                 self.ACTION_EAST: self.prob_forward
             }
 
-    def get_reward_for_position(self, current_position):
+    def get_reward_for_position(self, old_position, current_position):
         """
         Get reward for current position based on the configuration
         """
+
         current_position_x, current_position_y = current_position
         if current_position == self.mdp_goal:
-            return self.rew_goal
+            return self.rew_goal + self.rew_step
 
-        elif current_position in self.mdp_walls:
+        elif old_position == current_position:
             return self.rew_wall
 
         elif current_position in self.mdp_pits:
-            return self.rew_pit
+            return self.rew_pit + self.rew_step
 
         elif self.map[current_position_x][current_position_y] == 0:
             return self.rew_step
@@ -209,7 +210,7 @@ class MarkovDecisionProcessWithEM:
 
             current_sum = 0
             for act, dest, prob in possible_destinations_on_action:
-                current_sum += prob * (self.get_reward_for_position(dest) + self.discount_factor * self.utility_path_list[-1][dest[0]][dest[1]])
+                current_sum += prob * (self.get_reward_for_position(current_position, dest) + self.discount_factor * self.utility_path_list[-1][dest[0]][dest[1]])
 
             if (maximum_sum is None) or (current_sum > maximum_sum):
                 maximum_sum = current_sum
@@ -218,6 +219,13 @@ class MarkovDecisionProcessWithEM:
 
         return maximum_sum, maximum_action
 
+    def get_no_of_mismatches(self, old_policy_list, new_policy_list):
+	count = 0
+	for row in range(len(self.map)):
+            for col in range(len(self.map[0])):
+		if old_policy_list[row][col] != new_policy_list[row][col]:
+		    count += 1
+	return count 
 
     def value_iteration(self):
         """
@@ -228,9 +236,7 @@ class MarkovDecisionProcessWithEM:
         result_policy_list = []
         self.utility_path_list.append(self.create_utility_path())
 
-        max_iter = 1000
         self.no_of_iter = 0
-        difference_threshold = 0.0
 
         while (True):
             current_utility_path = self.create_utility_path()
@@ -257,16 +263,19 @@ class MarkovDecisionProcessWithEM:
             self.utility_path_list.append(current_utility_path)
 
             difference = numpy.sum(abs(current_value_np - prev_value_np))
+	    print "Difference", difference
 	    
 	    result_policy_list.append(current_policy)
 
 	    self.no_of_iter += 1
+	    if self.no_of_iter > 1:
+		print "differences count", self.get_no_of_mismatches(result_policy_list[-2], current_policy)
 
-            if difference <= difference_threshold:
+            if difference <= self.config["threshold_difference"]:
                 print "Converged in", self.no_of_iter
                 break
 
-            if self.no_of_iter >= max_iter:
+            if self.no_of_iter >= self.config["max_iterations"]:
                 break
 	
 	return result_policy_list

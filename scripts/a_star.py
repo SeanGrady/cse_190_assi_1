@@ -97,7 +97,7 @@ class AStarSearch:
             new_pos_x = pos_x + move_x
             new_pos_y = pos_y + move_y
 
-            if new_pos_x >= 0 and new_pos_x < self.map_size[1] and new_pos_y >= 0 and new_pos_y < self.map_size[0]:
+            if new_pos_x >= 0 and new_pos_x < self.map_size[0] and new_pos_y >= 0 and new_pos_y < self.map_size[1]:
                 if self.map[new_pos_x, new_pos_y] != 0:
                     neighbours.add((new_pos_x, new_pos_y))
 

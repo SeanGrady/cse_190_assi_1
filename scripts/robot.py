@@ -7,7 +7,7 @@ import numpy as np
 from std_msgs.msg import Bool, String, Float32
 from cse_190_assi_3.msg import AStarPath, PolicyList
 from read_config import read_config
-from mdp_em import MarkovDecisionProcessWithEM
+from mdp_em_2 import MarkovDecisionProcessWithEM
 from a_star import AStarSearch
 
 
@@ -51,7 +51,7 @@ class RobotController():
             policy = self.result_policy_list[i]
             data_to_publish = [p for row in policy for p in row]
             self.policy_list_result.publish(data_to_publish)
-            rospy.sleep(0.25)
+            rospy.sleep(0.1)
         print "MDP Value Iteration Over"
         
         rospy.sleep(2)

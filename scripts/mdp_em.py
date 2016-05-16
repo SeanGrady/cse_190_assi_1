@@ -221,6 +221,7 @@ class MarkovDecisionProcessWithEM:
         self.no_of_iter = 0
 
         while (True):
+	    print self.no_of_iter
             self.no_of_iter += 1
 
             max_norm = 0

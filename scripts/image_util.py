@@ -1,8 +1,11 @@
 import cv2
 import numpy as np
 import os
+from read_config import read_config
 
-MAP_SHAPE = (244, 244, 3)
+map_x = (read_config()["map_size"][0])
+map_y = (read_config()["map_size"][1])
+MAP_SHAPE = (((map_x * (20 + 4)) + 4), ((map_y * (20 + 4)) + 4), 3)
 
 up = cv2.imread("../img/up.jpg")
 down = cv2.imread("../img/down.jpg")
